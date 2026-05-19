@@ -41,7 +41,3 @@ markdown.css  — estilos do conteúdo renderizado (referência local, substitu�
 ## Compatibilidade
 
 A funcionalidade de abrir/salvar direto no disco usa a **File System Access API**, disponível no Chrome e Edge. No Firefox, o salvamento cai automaticamente para download.
-
-## GitHub Pages
-
-Suba o repositório para o GitHub e ative em **Settings → Pages → Deploy from branch: main / root** para acessar o editor de qualquer lugar.
