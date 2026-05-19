@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MD Editor</title>
+  <link rel="stylesheet" href="style.css" />
+  <link id="md-theme" rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown-light.css" />
+
+  <!-- highlight.js theme (trocado via JS ao mudar tema) -->
+  <link id="hljs-theme" rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" />
+
+  <!-- Dependencies via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+
+<body>
+  <div id="app">
+
+    <!-- ── Toolbar ── -->
+    <div id="toolbar">
+      <span class="logo">MD Editor</span>
+      <div class="sep"></div>
+
+      <button id="btn-open" title="Abrir arquivo (Ctrl+O)">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+          <path
+            d="M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.5a.25.25 0 0 1-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75Z" />
+        </svg>
+        Abrir
+      </button>
+
+      <button id="btn-save" title="Salvar arquivo (Ctrl+S)">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+          <path
+            d="M2.75 14A1.75 1.75 0 0 1 1 12.25v-9.5C1 1.784 1.784 1 2.75 1h8.688c.464 0 .909.185 1.237.513l2.312 2.312c.328.328.513.773.513 1.237v7.938A1.75 1.75 0 0 1 13.25 14H2.75Zm0-1.5h10.5a.25.25 0 0 0 .25-.25V5.062a.25.25 0 0 0-.073-.177L11.116 2.573a.25.25 0 0 0-.177-.073H2.75a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25ZM5 4.75A.75.75 0 0 1 5.75 4h4.5a.75.75 0 0 1 0 1.5h-4.5A.75.75 0 0 1 5 4.75ZM4.75 8a3.25 3.25 0 1 1 6.5 0 3.25 3.25 0 0 1-6.5 0ZM8 6.25a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5Z" />
+        </svg>
+        Salvar
+      </button>
+
+      <button id="btn-copy" title="Copiar HTML gerado">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+          <path
+            d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z" />
+          <path
+            d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z" />
+        </svg>
+        Copiar HTML
+      </button>
+
+      <div class="sep"></div>
+
+      <button id="btn-sync" title="Scroll sincronizado">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+          <path
+            d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z" />
+        </svg>
+        Sync
+      </button>
+
+      <div class="spacer"></div>
+
+      <button id="btn-theme" title="Alternar tema (Ctrl+Shift+D)">🌙</button>
+
+      <input type="file" id="file-input" accept=".md,.markdown,.txt" />
+    </div>
+
+    <!-- ── Reopen banner ── -->
+    <div id="reopen-banner" style="display:none">
+      <span id="reopen-msg"></span>
+      <div class="reopen-actions">
+        <button id="btn-reopen-yes">Reabrir</button>
+        <button id="btn-reopen-no">Ignorar</button>
+      </div>
+    </div>
+
+    <!-- ── Panes ── -->
+    <div id="panes">
+      <div id="editor-pane">
+        <div class="pane-header">
+          <span>Editor</span>
+          <span id="filename-label">novo-arquivo.md</span>
+        </div>
+        <textarea id="editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+      </div>
+
+      <div id="resizer"></div>
+
+      <div id="preview-pane">
+        <div class="pane-header">
+          <span>Preview</span>
+          <span id="unsaved-dot"></span>
+        </div>
+        <div id="preview" class="markdown-body"></div>
+      </div>
+    </div>
+
+    <!-- ── Status bar ── -->
+    <div id="statusbar">
+      <span id="stat-words">0 palavras</span>
+      <span>·</span>
+      <span id="stat-chars">0 caracteres</span>
+      <span>·</span>
+      <span id="stat-lines">1 linha</span>
+      <span>·</span>
+      <span id="stat-time">—</span>
+    </div>
+
+  </div>
+
+  <script>
+    (function () {
+      /* ── State ── */
+      let isDark = false;
+      let syncScroll = true;
+      let currentFilename = 'novo-arquivo.md';
+      let savedContent = '';
+      let syncingFromEditor = false;
+      let syncingFromPreview = false;
+      let fileHandle = null;
+
+      /* ── Elements ── */
+      const editor = document.getElementById('editor');
+      const preview = document.getElementById('preview');
+      const fileInput = document.getElementById('file-input');
+      const btnOpen = document.getElementById('btn-open');
+      const btnSave = document.getElementById('btn-save');
+      const btnCopy = document.getElementById('btn-copy');
+      const btnSync = document.getElementById('btn-sync');
+      const btnTheme = document.getElementById('btn-theme');
+      const hlTheme = document.getElementById('hljs-theme');
+      const mdTheme = document.getElementById('md-theme');
+      const statWords = document.getElementById('stat-words');
+      const statChars = document.getElementById('stat-chars');
+      const statLines = document.getElementById('stat-lines');
+      const statTime = document.getElementById('stat-time');
+      const filenameLabel = document.getElementById('filename-label');
+      const unsavedDot = document.getElementById('unsaved-dot');
+
+      /* ── IndexedDB helper (persiste o fileHandle entre reloads) ── */
+      const IDB_NAME = 'md-editor', IDB_STORE = 'state', IDB_KEY = 'fileHandle';
+
+      function idbOpen() {
+        return new Promise((res, rej) => {
+          const req = indexedDB.open(IDB_NAME, 1);
+          req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+          req.onsuccess = () => res(req.result);
+          req.onerror = () => rej(req.error);
+        });
+      }
+
+      async function idbGet(key) {
+        const db = await idbOpen();
+        return new Promise((res, rej) => {
+          const req = db.transaction(IDB_STORE).objectStore(IDB_STORE).get(key);
+          req.onsuccess = () => res(req.result);
+          req.onerror = () => rej(req.error);
+        });
+      }
+
+      async function idbSet(key, value) {
+        const db = await idbOpen();
+        return new Promise((res, rej) => {
+          const req = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).put(value, key);
+          req.onsuccess = () => res();
+          req.onerror = () => rej(req.error);
+        });
+      }
+
+      async function idbDel(key) {
+        const db = await idbOpen();
+        return new Promise((res, rej) => {
+          const req = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).delete(key);
+          req.onsuccess = () => res();
+          req.onerror = () => rej(req.error);
+        });
+      }
+
+      /* ── marked config ── */
+      marked.use({
+        breaks: true,
+        gfm: true,
+        renderer: {
+          code({ text, lang }) {
+            const language = lang && hljs.getLanguage(lang) ? lang : 'plaintext';
+            const highlighted = hljs.highlight(text || '', { language }).value;
+            return `<pre><code class="hljs language-${language}">${highlighted}</code></pre>`;
+          }
+        }
+      });
+
+      /* ── Render ── */
+      function render() {
+        const raw = editor.value;
+        const dirty = raw !== savedContent;
+        unsavedDot.textContent = dirty ? '● não salvo' : '';
+        unsavedDot.className = dirty ? 'unsaved' : '';
+
+        const html = DOMPurify.sanitize(marked.parse(raw));
+        preview.innerHTML = html;
+        updateStats(raw);
+      }
+
+      function updateStats(text) {
+        const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+        const chars = text.length;
+        const lines = text.split('\n').length;
+
+        statWords.textContent = `${words} ${words === 1 ? 'palavra' : 'palavras'}`;
+        statChars.textContent = `${chars} ${chars === 1 ? 'caractere' : 'caracteres'}`;
+        statLines.textContent = `${lines} ${lines === 1 ? 'linha' : 'linhas'}`;
+        statTime.textContent = estimateReadTime(words);
+      }
+
+      function estimateReadTime(words) {
+        const mins = Math.ceil(words / 200);
+        return mins <= 0 ? '—' : `~${mins} min leitura`;
+      }
+
+      /* ── Default content ── */
+      const defaultContent = `# Bem-vindo ao MD Editor
+
+Escreva **Markdown** à esquerda e veja o resultado em tempo real à direita.
+
+## Funcionalidades
+
+- Abertura e salvamento de arquivos \`.md\`
+- Syntax highlighting em blocos de código
+- Scroll sincronizado entre editor e preview
+- Modo escuro / claro
+- Contador de palavras, caracteres e linhas
+
+## Exemplo de código
+
+\`\`\`javascript
+function hello(name) {
+  return \`Olá, \${name}!\`;
+}
+
+console.log(hello('mundo'));
+\`\`\`
+
+## Tabela
+
+| Atalho | Ação |
+|--------|------|
+| \`Ctrl+S\` | Salvar |
+| \`Ctrl+O\` | Abrir arquivo |
+| \`Ctrl+Shift+D\` | Alternar tema |
+
+> Dica: arraste a barra central para redimensionar os painéis.
+
+---
+
+Bom trabalho! ✍️
+`;
+
+      editor.value = defaultContent;
+      savedContent = defaultContent;
+      render();
+
+      /* ── Restore last file on load ── */
+      const reopenBanner  = document.getElementById('reopen-banner');
+      const reopenMsg     = document.getElementById('reopen-msg');
+      const btnReopenYes  = document.getElementById('btn-reopen-yes');
+      const btnReopenNo   = document.getElementById('btn-reopen-no');
+
+      (async () => {
+        if (!('showOpenFilePicker' in window)) return;
+        try {
+          const stored = await idbGet(IDB_KEY);
+          if (!stored) return;
+          const perm = await stored.queryPermission({ mode: 'readwrite' });
+          if (perm === 'granted') {
+            await loadFromHandle(stored);
+          } else if (perm === 'prompt') {
+            reopenMsg.textContent = `Reabrir "${stored.name}"?`;
+            reopenBanner.style.display = 'flex';
+            btnReopenYes.onclick = async () => {
+              reopenBanner.style.display = 'none';
+              const granted = await stored.requestPermission({ mode: 'readwrite' });
+              if (granted === 'granted') await loadFromHandle(stored);
+              else idbDel(IDB_KEY);
+            };
+            btnReopenNo.onclick = () => { reopenBanner.style.display = 'none'; };
+          } else {
+            await idbDel(IDB_KEY);
+          }
+        } catch { /* handle revogado ou inexistente */ }
+      })();
+
+      /* ── Events ── */
+      editor.addEventListener('input', render);
+
+      /* ── Scroll sync ── */
+      editor.addEventListener('scroll', () => {
+        if (!syncScroll || syncingFromPreview) return;
+        syncingFromEditor = true;
+        const ratio = editor.scrollTop / (editor.scrollHeight - editor.clientHeight || 1);
+        preview.scrollTop = ratio * (preview.scrollHeight - preview.clientHeight);
+        syncingFromEditor = false;
+      });
+
+      preview.addEventListener('scroll', () => {
+        if (!syncScroll || syncingFromEditor) return;
+        syncingFromPreview = true;
+        const ratio = preview.scrollTop / (preview.scrollHeight - preview.clientHeight || 1);
+        editor.scrollTop = ratio * (editor.scrollHeight - editor.clientHeight);
+        syncingFromPreview = false;
+      });
+
+      /* ── Open file ── */
+      async function loadFromHandle(handle) {
+        const file = await handle.getFile();
+        currentFilename = file.name;
+        filenameLabel.textContent = currentFilename;
+        editor.value = await file.text();
+        savedContent = editor.value;
+        fileHandle = handle;
+        await idbSet(IDB_KEY, handle);
+        render();
+      }
+
+      async function openFile() {
+        if ('showOpenFilePicker' in window) {
+          try {
+            const [handle] = await window.showOpenFilePicker({
+              types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md', '.markdown', '.txt'] } }]
+            });
+            await loadFromHandle(handle);
+          } catch (err) {
+            if (err.name !== 'AbortError') console.error(err);
+          }
+        } else {
+          fileInput.click();
+        }
+      }
+
+      btnOpen.addEventListener('click', openFile);
+
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+        fileHandle = null;
+        idbDel(IDB_KEY);
+        currentFilename = file.name;
+        filenameLabel.textContent = currentFilename;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          editor.value = e.target.result;
+          savedContent = e.target.result;
+          render();
+        };
+        reader.readAsText(file, 'UTF-8');
+        fileInput.value = '';
+      });
+
+      /* ── Save file ── */
+      async function saveFile() {
+        const content = editor.value;
+
+        if (fileHandle) {
+          try {
+            const writable = await fileHandle.createWritable();
+            await writable.write(content);
+            await writable.close();
+            savedContent = content;
+            render();
+            return;
+          } catch (err) {
+            if (err.name !== 'AbortError') console.error(err);
+          }
+        }
+
+        if ('showSaveFilePicker' in window) {
+          try {
+            const handle = await window.showSaveFilePicker({
+              suggestedName: currentFilename,
+              types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md', '.markdown'] } }]
+            });
+            fileHandle = handle;
+            await idbSet(IDB_KEY, handle);
+            currentFilename = (await handle.getFile()).name;
+            filenameLabel.textContent = currentFilename;
+            const writable = await handle.createWritable();
+            await writable.write(content);
+            await writable.close();
+          } catch (err) {
+            if (err.name === 'AbortError') return;
+            console.error(err);
+          }
+        } else {
+          const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = currentFilename;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+
+        savedContent = content;
+        render();
+      }
+
+      btnSave.addEventListener('click', saveFile);
+
+      /* ── Copy HTML ── */
+      btnCopy.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(preview.innerHTML);
+          const original = btnCopy.textContent;
+          btnCopy.textContent = '✓ Copiado!';
+          setTimeout(() => { btnCopy.innerHTML = `<svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"/></svg> Copiar HTML`; }, 1800);
+        } catch {
+          alert('Não foi possível acessar a área de transferência.');
+        }
+      });
+
+      /* ── Sync toggle ── */
+      btnSync.addEventListener('click', () => {
+        syncScroll = !syncScroll;
+        btnSync.style.color = syncScroll ? 'var(--accent)' : 'var(--text-muted)';
+        btnSync.style.borderColor = syncScroll ? 'var(--accent)' : '';
+      });
+      btnSync.style.color = 'var(--accent)';
+      btnSync.style.borderColor = 'var(--accent)';
+
+      /* ── Theme ── */
+      function setTheme(dark) {
+        isDark = dark;
+        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+        btnTheme.textContent = dark ? '☀️' : '🌙';
+        hlTheme.href = dark
+          ? 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css'
+          : 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
+        mdTheme.href = dark
+          ? 'https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown-dark.css'
+          : 'https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown-light.css';
+        localStorage.setItem('md-theme', dark ? 'dark' : 'light');
+      }
+
+      btnTheme.addEventListener('click', () => setTheme(!isDark));
+
+      /* Restore saved theme */
+      if (localStorage.getItem('md-theme') === 'dark') setTheme(true);
+
+      /* ── Resizer ── */
+      const resizer = document.getElementById('resizer');
+      const editorPane = document.getElementById('editor-pane');
+      const panes = document.getElementById('panes');
+      let isResizing = false;
+
+      resizer.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        resizer.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        const rect = panes.getBoundingClientRect();
+        const offset = e.clientX - rect.left;
+        const total = rect.width;
+        const pct = Math.min(Math.max(offset / total * 100, 15), 85);
+        editorPane.style.width = pct + '%';
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (!isResizing) return;
+        isResizing = false;
+        resizer.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      });
+
+      /* ── Keyboard shortcuts ── */
+      document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 's') {
+          e.preventDefault();
+          saveFile();
+        }
+        if (e.ctrlKey && e.key === 'o') {
+          e.preventDefault();
+          openFile();
+        }
+        if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+          e.preventDefault();
+          setTheme(!isDark);
+        }
+        /* Tab key → insert 2 spaces */
+        if (e.key === 'Tab' && document.activeElement === editor) {
+          e.preventDefault();
+          const start = editor.selectionStart;
+          const end = editor.selectionEnd;
+          editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
+          editor.selectionStart = editor.selectionEnd = start + 2;
+          render();
+        }
+      });
+
+    })();
+  </script>
+</body>
+
+</html>
