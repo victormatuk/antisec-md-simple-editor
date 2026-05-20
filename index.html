@@ -195,13 +195,18 @@
       });
 
       /* ── Render ── */
+      function preprocessMarkdown(src) {
+        // Aceita "[]" como atalho para "[ ]" em task lists (GFM exige espaço).
+        return src.replace(/^(\s*[-*+]\s+)\[\](?=\s|$)/gm, '$1[ ]');
+      }
+
       function render() {
         const raw = editor.value;
         const dirty = raw !== savedContent;
         unsavedDot.textContent = dirty ? '● não salvo' : '';
         unsavedDot.className = dirty ? 'unsaved' : '';
 
-        const html = DOMPurify.sanitize(marked.parse(raw));
+        const html = DOMPurify.sanitize(marked.parse(preprocessMarkdown(raw)));
         preview.innerHTML = html;
         updateStats(raw);
       }
