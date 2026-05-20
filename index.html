@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="light">
+<html lang="en" data-theme="light">
 
 <head>
   <meta charset="UTF-8" />
@@ -7,17 +7,17 @@
   <title>MD Editor</title>
   <link rel="stylesheet" href="style.css" />
   <link id="md-theme" rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown-light.css" />
+    href="vendor/css/github-markdown-light.css" />
 
-  <!-- highlight.js theme (trocado via JS ao mudar tema) -->
+  <!-- highlight.js theme (swapped via JS when toggling theme) -->
   <link id="hljs-theme" rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" />
+    href="vendor/css/highlight-github.min.css" />
 
-  <!-- Dependencies via CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-  <script type="module" src="https://cdn.jsdelivr.net/npm/@github/markdown-toolbar-element@2/dist/index.js"></script>
+  <!-- Dependencies (local) -->
+  <script src="vendor/js/marked.min.js"></script>
+  <script src="vendor/js/purify.min.js"></script>
+  <script src="vendor/js/highlight.min.js"></script>
+  <script type="module" src="vendor/js/markdown-toolbar-element.js"></script>
 </head>
 
 <body>
@@ -28,35 +28,35 @@
       <span class="logo">MD Editor</span>
       <div class="sep"></div>
 
-      <button id="btn-open" title="Abrir arquivo (Ctrl+O)">
+      <button id="btn-open" title="Open file (Ctrl+O)">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
           <path
             d="M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.5a.25.25 0 0 1-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75Z" />
         </svg>
-        Abrir
+        Open
       </button>
 
-      <button id="btn-save" title="Salvar arquivo (Ctrl+S)">
+      <button id="btn-save" title="Save file (Ctrl+S)">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
           <path
             d="M2.75 14A1.75 1.75 0 0 1 1 12.25v-9.5C1 1.784 1.784 1 2.75 1h8.688c.464 0 .909.185 1.237.513l2.312 2.312c.328.328.513.773.513 1.237v7.938A1.75 1.75 0 0 1 13.25 14H2.75Zm0-1.5h10.5a.25.25 0 0 0 .25-.25V5.062a.25.25 0 0 0-.073-.177L11.116 2.573a.25.25 0 0 0-.177-.073H2.75a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25ZM5 4.75A.75.75 0 0 1 5.75 4h4.5a.75.75 0 0 1 0 1.5h-4.5A.75.75 0 0 1 5 4.75ZM4.75 8a3.25 3.25 0 1 1 6.5 0 3.25 3.25 0 0 1-6.5 0ZM8 6.25a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5Z" />
         </svg>
-        Salvar
+        Save
       </button>
 
-      <button id="btn-copy" title="Copiar HTML gerado">
+      <button id="btn-copy" title="Copy generated HTML">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
           <path
             d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z" />
           <path
             d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z" />
         </svg>
-        Copiar HTML
+        Copy HTML
       </button>
 
       <div class="sep"></div>
 
-      <button id="btn-sync" title="Scroll sincronizado">
+      <button id="btn-sync" title="Synchronized scroll">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
           <path
             d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z" />
@@ -66,7 +66,7 @@
 
       <div class="spacer"></div>
 
-      <button id="btn-theme" title="Alternar tema (Ctrl+Shift+D)">🌙</button>
+      <button id="btn-theme" title="Toggle theme (Ctrl+Shift+D)">🌙</button>
 
       <input type="file" id="file-input" accept=".md,.markdown,.txt" />
     </div>
@@ -75,8 +75,8 @@
     <div id="reopen-banner" style="display:none">
       <span id="reopen-msg"></span>
       <div class="reopen-actions">
-        <button id="btn-reopen-yes">Reabrir</button>
-        <button id="btn-reopen-no">Ignorar</button>
+        <button id="btn-reopen-yes">Reopen</button>
+        <button id="btn-reopen-no">Ignore</button>
       </div>
     </div>
 
@@ -85,45 +85,45 @@
       <div id="editor-pane">
         <div class="pane-header">
           <span>Editor</span>
-          <span id="filename-label">novo-arquivo.md</span>
+          <span id="filename-label">new-file.md</span>
         </div>
         <markdown-toolbar for="editor" id="format-bar">
-          <md-header level="1" class="fb-btn" title="Cabeçalho 1">H1</md-header>
-          <md-header level="2" class="fb-btn" title="Cabeçalho 2">H2</md-header>
-          <md-header level="3" class="fb-btn" title="Cabeçalho 3">H3</md-header>
-          <md-header level="4" class="fb-btn" title="Cabeçalho 4">H4</md-header>
-          <md-header level="5" class="fb-btn" title="Cabeçalho 5">H5</md-header>
-          <md-header level="6" class="fb-btn" title="Cabeçalho 6">H6</md-header>
+          <md-header level="1" class="fb-btn" title="Heading 1">H1</md-header>
+          <md-header level="2" class="fb-btn" title="Heading 2">H2</md-header>
+          <md-header level="3" class="fb-btn" title="Heading 3">H3</md-header>
+          <md-header level="4" class="fb-btn" title="Heading 4">H4</md-header>
+          <md-header level="5" class="fb-btn" title="Heading 5">H5</md-header>
+          <md-header level="6" class="fb-btn" title="Heading 6">H6</md-header>
           <span class="fb-sep"></span>
-          <md-bold class="fb-btn" title="Negrito (Ctrl+B)"><strong>B</strong></md-bold>
-          <md-italic class="fb-btn" title="Itálico (Ctrl+I)"><em>I</em></md-italic>
-          <md-strikethrough class="fb-btn" title="Tachado"><s>S</s></md-strikethrough>
-          <md-code class="fb-btn" title="Código inline (Ctrl+E)">&lt;/&gt;</md-code>
+          <md-bold class="fb-btn" title="Bold (Ctrl+B)"><strong>B</strong></md-bold>
+          <md-italic class="fb-btn" title="Italic (Ctrl+I)"><em>I</em></md-italic>
+          <md-strikethrough class="fb-btn" title="Strikethrough"><s>S</s></md-strikethrough>
+          <md-code class="fb-btn" title="Inline code (Ctrl+E)">&lt;/&gt;</md-code>
           <span class="fb-sep"></span>
-          <md-quote class="fb-btn" title="Citação">&ldquo; &rdquo;</md-quote>
-          <md-unordered-list class="fb-btn" title="Lista">• ─</md-unordered-list>
-          <md-ordered-list class="fb-btn" title="Lista numerada">1. 2.</md-ordered-list>
-          <md-task-list class="fb-btn" title="Lista de tarefas">[ ]</md-task-list>
+          <md-quote class="fb-btn" title="Quote">&ldquo; &rdquo;</md-quote>
+          <md-unordered-list class="fb-btn" title="List">• ─</md-unordered-list>
+          <md-ordered-list class="fb-btn" title="Numbered list">1. 2.</md-ordered-list>
+          <md-task-list class="fb-btn" title="Task list">[ ]</md-task-list>
           <span class="fb-sep"></span>
           <md-link class="fb-btn" title="Link (Ctrl+K)">link</md-link>
-          <md-image class="fb-btn" title="Imagem">img</md-image>
+          <md-image class="fb-btn" title="Image">img</md-image>
           <span class="fb-sep"></span>
-          <md-mention class="fb-btn" title="Menção">@</md-mention>
-          <md-ref class="fb-btn" title="Referência (issue/PR)">#</md-ref>
+          <md-mention class="fb-btn" title="Mention">@</md-mention>
+          <md-ref class="fb-btn" title="Reference (issue/PR)">#</md-ref>
           <span class="fb-sep"></span>
-          <button type="button" class="fb-btn fb-custom" data-action="bold-italic" title="Negrito + itálico">B<em>I</em></button>
-          <button type="button" class="fb-btn fb-custom" data-action="codeblock" title="Bloco de código (com linguagem)">{ }</button>
-          <button type="button" class="fb-btn fb-custom" data-action="table" title="Inserir tabela">▦</button>
-          <button type="button" class="fb-btn fb-custom" data-action="hr" title="Linha horizontal">―</button>
-          <button type="button" class="fb-btn fb-custom" data-action="linebreak" title="Quebra de linha (2 espaços + enter)">↵</button>
+          <button type="button" class="fb-btn fb-custom" data-action="bold-italic" title="Bold + italic">B<em>I</em></button>
+          <button type="button" class="fb-btn fb-custom" data-action="codeblock" title="Code block (with language)">{ }</button>
+          <button type="button" class="fb-btn fb-custom" data-action="table" title="Insert table">▦</button>
+          <button type="button" class="fb-btn fb-custom" data-action="hr" title="Horizontal rule">―</button>
+          <button type="button" class="fb-btn fb-custom" data-action="linebreak" title="Line break (2 spaces + enter)">↵</button>
           <span class="fb-sep"></span>
-          <button type="button" class="fb-btn fb-custom" data-action="sub" title="Subscrito">X₂</button>
-          <button type="button" class="fb-btn fb-custom" data-action="sup" title="Sobrescrito">X²</button>
-          <button type="button" class="fb-btn fb-custom" data-action="mark" title="Destaque (&lt;mark&gt;)">mk</button>
-          <button type="button" class="fb-btn fb-custom" data-action="ins" title="Sublinhado (&lt;ins&gt;)">U</button>
-          <button type="button" class="fb-btn fb-custom" data-action="kbd" title="Tecla (&lt;kbd&gt;)">⌨</button>
-          <button type="button" class="fb-btn fb-custom" data-action="abbr" title="Abreviação (&lt;abbr&gt;)">ab</button>
-          <button type="button" class="fb-btn fb-custom" data-action="details" title="Bloco recolhível (&lt;details&gt;)">▾</button>
+          <button type="button" class="fb-btn fb-custom" data-action="sub" title="Subscript">X₂</button>
+          <button type="button" class="fb-btn fb-custom" data-action="sup" title="Superscript">X²</button>
+          <button type="button" class="fb-btn fb-custom" data-action="mark" title="Highlight (&lt;mark&gt;)">mk</button>
+          <button type="button" class="fb-btn fb-custom" data-action="ins" title="Underline (&lt;ins&gt;)">U</button>
+          <button type="button" class="fb-btn fb-custom" data-action="kbd" title="Key (&lt;kbd&gt;)">⌨</button>
+          <button type="button" class="fb-btn fb-custom" data-action="abbr" title="Abbreviation (&lt;abbr&gt;)">ab</button>
+          <button type="button" class="fb-btn fb-custom" data-action="details" title="Collapsible block (&lt;details&gt;)">▾</button>
         </markdown-toolbar>
         <textarea id="editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
       </div>
@@ -141,11 +141,11 @@
 
     <!-- ── Status bar ── -->
     <div id="statusbar">
-      <span id="stat-words">0 palavras</span>
+      <span id="stat-words">0 words</span>
       <span>·</span>
-      <span id="stat-chars">0 caracteres</span>
+      <span id="stat-chars">0 characters</span>
       <span>·</span>
-      <span id="stat-lines">1 linha</span>
+      <span id="stat-lines">1 line</span>
       <span>·</span>
       <span id="stat-time">—</span>
     </div>
@@ -157,7 +157,7 @@
       /* ── State ── */
       let isDark = false;
       let syncScroll = true;
-      let currentFilename = 'novo-arquivo.md';
+      let currentFilename = 'new-file.md';
       let savedContent = '';
       let syncingFromEditor = false;
       let syncingFromPreview = false;
@@ -181,7 +181,7 @@
       const filenameLabel = document.getElementById('filename-label');
       const unsavedDot = document.getElementById('unsaved-dot');
 
-      /* ── IndexedDB helper (persiste o fileHandle entre reloads) ── */
+      /* ── IndexedDB helper (persists fileHandle across reloads) ── */
       const IDB_NAME = 'md-editor', IDB_STORE = 'state', IDB_KEY = 'fileHandle';
 
       function idbOpen() {
@@ -236,14 +236,14 @@
 
       /* ── Render ── */
       function preprocessMarkdown(src) {
-        // Aceita "[]" como atalho para "[ ]" em task lists (GFM exige espaço).
+        // Accepts "[]" as shorthand for "[ ]" in task lists (GFM requires the space).
         return src.replace(/^(\s*[-*+]\s+)\[\](?=\s|$)/gm, '$1[ ]');
       }
 
       function render() {
         const raw = editor.value;
         const dirty = raw !== savedContent;
-        unsavedDot.textContent = dirty ? '● não salvo' : '';
+        unsavedDot.textContent = dirty ? '● unsaved' : '';
         unsavedDot.className = dirty ? 'unsaved' : '';
 
         const html = DOMPurify.sanitize(marked.parse(preprocessMarkdown(raw)));
@@ -256,57 +256,57 @@
         const chars = text.length;
         const lines = text.split('\n').length;
 
-        statWords.textContent = `${words} ${words === 1 ? 'palavra' : 'palavras'}`;
-        statChars.textContent = `${chars} ${chars === 1 ? 'caractere' : 'caracteres'}`;
-        statLines.textContent = `${lines} ${lines === 1 ? 'linha' : 'linhas'}`;
+        statWords.textContent = `${words} ${words === 1 ? 'word' : 'words'}`;
+        statChars.textContent = `${chars} ${chars === 1 ? 'character' : 'characters'}`;
+        statLines.textContent = `${lines} ${lines === 1 ? 'line' : 'lines'}`;
         statTime.textContent = estimateReadTime(words);
       }
 
       function estimateReadTime(words) {
         const mins = Math.ceil(words / 200);
-        return mins <= 0 ? '—' : `~${mins} min leitura`;
+        return mins <= 0 ? '—' : `~${mins} min read`;
       }
 
       /* ── Default content ── */
-      const defaultContent = `# Bem-vindo ao MD Editor
+      const defaultContent = `# Welcome to MD Editor
 
-Escreva **Markdown** à esquerda e veja o resultado em tempo real à direita.
-
----
-
-## 1. Cabeçalhos
-
-# H1 — Cabeçalho nível 1
-## H2 — Cabeçalho nível 2
-### H3 — Cabeçalho nível 3
-#### H4 — Cabeçalho nível 4
-##### H5 — Cabeçalho nível 5
-###### H6 — Cabeçalho nível 6
-
-Cabeçalho alternativo H1
-========================
-
-Cabeçalho alternativo H2
-------------------------
+Write **Markdown** on the left and see the rendered result in real time on the right.
 
 ---
 
-## 2. Ênfase e estilo de texto
+## 1. Headings
 
-- **Negrito** ou __também negrito__
-- *Itálico* ou _também itálico_
-- ***Negrito e itálico*** ou ___combinados___
-- ~~Tachado~~ (strikethrough)
-- \`código inline\` com \`crases\`
-- Texto normal com <ins>sublinhado HTML</ins> e <mark>destaque</mark>
-- Subscrito: H<sub>2</sub>O — Sobrescrito: E = mc<sup>2</sup>
-- Escape de caracteres: \\*não é itálico\\* e \\\`não é código\\\`
+# H1 — Heading level 1
+## H2 — Heading level 2
+### H3 — Heading level 3
+#### H4 — Heading level 4
+##### H5 — Heading level 5
+###### H6 — Heading level 6
+
+Alternative H1 heading
+======================
+
+Alternative H2 heading
+----------------------
 
 ---
 
-## 3. Listas
+## 2. Emphasis and text style
 
-### Lista não ordenada
+- **Bold** or __also bold__
+- *Italic* or _also italic_
+- ***Bold and italic*** or ___combined___
+- ~~Strikethrough~~
+- \`inline code\` with \`backticks\`
+- Normal text with <ins>HTML underline</ins> and <mark>highlight</mark>
+- Subscript: H<sub>2</sub>O — Superscript: E = mc<sup>2</sup>
+- Character escaping: \\*not italic\\* and \\\`not code\\\`
+
+---
+
+## 3. Lists
+
+### Unordered list
 
 - Item A
 - Item B
@@ -315,87 +315,87 @@ Cabeçalho alternativo H2
     - Sub-subitem B.2.a
 - Item C
 
-* Também funciona com asterisco
-+ Ou com sinal de mais
+* Also works with an asterisk
++ Or with a plus sign
 
-### Lista ordenada
+### Ordered list
 
-1. Primeiro
-2. Segundo
-   1. Aninhado 2.1
-   2. Aninhado 2.2
-3. Terceiro
-4. Quarto
+1. First
+2. Second
+   1. Nested 2.1
+   2. Nested 2.2
+3. Third
+4. Fourth
 
-### Lista de tarefas (task list)
+### Task list
 
-- [x] Tarefa concluída
-- [ ] Tarefa pendente
-- [] Atalho: colchetes vazios viram \`[ ]\` automaticamente
-- [x] Comprar leite
-  - [ ] Subtarefa pendente
-  - [x] Subtarefa feita
-
----
-
-## 4. Links e imagens
-
-- Link simples: [Anthropic](https://www.anthropic.com)
-- Link com título: [Claude](https://claude.ai "Site oficial do Claude")
-- Link automático: <https://example.com>
-- Email: <contato@example.com>
-- Link de referência: [GitHub][gh-ref]
-
-[gh-ref]: https://github.com "Repositórios do mundo"
-
-Imagem:
-
-![Logo Markdown](https://upload.wikimedia.org/wikipedia/commons/4/48/Markdown-mark.svg)
-
-Imagem com link clicável:
-
-[![Logo Markdown](https://upload.wikimedia.org/wikipedia/commons/4/48/Markdown-mark.svg)](https://daringfireball.net/projects/markdown/)
+- [x] Completed task
+- [ ] Pending task
+- [] Shortcut: empty brackets automatically become \`[ ]\`
+- [x] Buy milk
+  - [ ] Pending subtask
+  - [x] Completed subtask
 
 ---
 
-## 5. Citações (blockquote)
+## 4. Links and images
 
-> Esta é uma citação simples.
+- Simple link: [Anthropic](https://www.anthropic.com)
+- Link with title: [Claude](https://claude.ai "Claude's official site")
+- Autolink: <https://example.com>
+- Email: <contact@example.com>
+- Reference link: [GitHub][gh-ref]
 
-> Citação com **negrito** e *itálico*.
+[gh-ref]: https://github.com "Repositories of the world"
+
+Image:
+
+![Markdown Logo](https://upload.wikimedia.org/wikipedia/commons/4/48/Markdown-mark.svg)
+
+Image with clickable link:
+
+[![Markdown Logo](https://upload.wikimedia.org/wikipedia/commons/4/48/Markdown-mark.svg)](https://daringfireball.net/projects/markdown/)
+
+---
+
+## 5. Blockquotes
+
+> This is a simple quote.
+
+> Quote with **bold** and *italic*.
 >
-> Segundo parágrafo da mesma citação.
+> Second paragraph of the same quote.
 
-> Nível 1
->> Nível 2 (aninhado)
->>> Nível 3
->>>> Nível 4
+> Level 1
+>> Level 2 (nested)
+>>> Level 3
+>>>> Level 4
 
-> 💡 **Dica:** você pode misturar listas dentro de citações:
+> 💡 **Tip:** you can mix lists inside quotes:
 > - Item 1
 > - Item 2
 
 ---
 
-## 6. Código
+## 6. Code
 
 ### Inline
-Use \`const x = 42;\` para declarar uma constante.
+Use \`const x = 42;\` to declare a constant.
 
-### Bloco simples
+### Plain block
 
 \`\`\`
-Sem linguagem definida — apenas texto pré-formatado.
-  Espaços   e   indentação   preservados.
+No language defined — just preformatted text.
+  Spaces   and   indentation   preserved.
 \`\`\`
 
 ### JavaScript
 
 \`\`\`javascript
 function hello(name) {
-  return \`Olá, \${name}!\`;
+  return \`Hello, \${name}!\`;
 }
-console.log(hello('mundo'));
+console.log(hello('world'));
 \`\`\`
 
 ### Python
@@ -415,7 +415,7 @@ print(list(fib(10)))
 \`\`\`bash
 #!/usr/bin/env bash
 for file in *.md; do
-  echo "Processando $file"
+  echo "Processing $file"
 done
 \`\`\`
 
@@ -433,8 +433,8 @@ done
 
 \`\`\`html
 <div class="card">
-  <h2>Olá, mundo!</h2>
-  <p>Conteúdo aqui.</p>
+  <h2>Hello, world!</h2>
+  <p>Content here.</p>
 </div>
 \`\`\`
 
@@ -460,49 +460,49 @@ ORDER BY created_at DESC;
 ### Diff
 
 \`\`\`diff
-- linha removida
-+ linha adicionada
-  linha inalterada
+- removed line
++ added line
+  unchanged line
 \`\`\`
 
-### Indentado (4 espaços)
+### Indented (4 spaces)
 
-    Bloco de código por indentação
-    também funciona, sem highlight.
+    Indented code block
+    also works, without highlight.
 
 ---
 
-## 7. Tabelas
+## 7. Tables
 
-### Tabela básica
+### Basic table
 
-| Atalho          | Ação                |
-|-----------------|---------------------|
-| \`Ctrl+S\`        | Salvar              |
-| \`Ctrl+O\`        | Abrir arquivo       |
-| \`Ctrl+Shift+D\`  | Alternar tema       |
+| Shortcut         | Action          |
+|------------------|-----------------|
+| \`Ctrl+S\`        | Save            |
+| \`Ctrl+O\`        | Open file       |
+| \`Ctrl+Shift+D\`  | Toggle theme    |
 
-### Tabela com alinhamento
+### Table with alignment
 
-| Esquerda  | Centro      | Direita |
+| Left      | Center      | Right   |
 |:----------|:-----------:|--------:|
-| linha 1   | valor       |   1,00  |
-| linha 22  | outro       |  22,50  |
-| linha 333 | algo grande | 333,75  |
+| row 1     | value       |   1.00  |
+| row 22    | other       |  22.50  |
+| row 333   | big thing   | 333.75  |
 
-### Tabela com formatação interna
+### Table with inline formatting
 
-| Linguagem | Exemplo                 | Popular? |
-|-----------|-------------------------|:--------:|
-| **JS**    | \`console.log('oi')\`     |    ✅    |
-| **Py**    | \`print("oi")\`           |    ✅    |
-| ~~COBOL~~ | *legado*                |    ❌    |
+| Language  | Example                  | Popular? |
+|-----------|--------------------------|:--------:|
+| **JS**    | \`console.log('hi')\`     |    ✅    |
+| **Py**    | \`print("hi")\`           |    ✅    |
+| ~~COBOL~~ | *legacy*                 |    ❌    |
 
 ---
 
-## 8. Linha horizontal
+## 8. Horizontal rule
 
-Três ou mais hifens, asteriscos ou underscores:
+Three or more hyphens, asterisks, or underscores:
 
 ---
 
@@ -512,74 +512,74 @@ ___
 
 ---
 
-## 9. HTML embutido
+## 9. Inline HTML
 
 <details>
-<summary>Clique para expandir 👇</summary>
+<summary>Click to expand 👇</summary>
 
-Conteúdo escondido dentro de \`<details>\`. Pode conter **markdown** também:
+Hidden content inside \`<details>\`. It can contain **markdown** too:
 
 - item 1
 - item 2
 
 </details>
 
-<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> abre a paleta de comandos.
+<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> opens the command palette.
 
-<abbr title="HyperText Markup Language">HTML</abbr> é uma sigla.
-
----
-
-## 10. Quebras de linha e parágrafos
-
-Esta linha termina com dois espaços no final
-e quebra aqui (line break).
-
-Esta é uma nova
-linha sem quebra explícita — pode virar quebra dependendo da configuração.
-
-Parágrafo separado por linha em branco acima.
+<abbr title="HyperText Markup Language">HTML</abbr> is an acronym.
 
 ---
 
-## 11. Emojis e caracteres especiais
+## 10. Line breaks and paragraphs
+
+This line ends with two trailing spaces
+and breaks here (line break).
+
+This is a new
+line without an explicit break — it may or may not break depending on configuration.
+
+Paragraph separated by a blank line above.
+
+---
+
+## 11. Emojis and special characters
 
 🚀 🎉 ✨ 🔥 ✍️ 💡 ✅ ❌ 📝 📦 🐛 🧪
 
-Setas: → ← ↑ ↓ ⇒ ⇐
-Símbolos: © ® ™ § ¶ † ‡ • … « »
-Matemática: ± × ÷ ≠ ≈ ≤ ≥ ∞ √ π Σ
+Arrows: → ← ↑ ↓ ⇒ ⇐
+Symbols: © ® ™ § ¶ † ‡ • … « »
+Math: ± × ÷ ≠ ≈ ≤ ≥ ∞ √ π Σ
 
 ---
 
-## 12. Combinações avançadas
+## 12. Advanced combinations
 
-> ### Citação com cabeçalho
+> ### Quote with heading
 >
-> 1. Lista ordenada dentro de citação
-> 2. Com \`código inline\`
+> 1. Ordered list inside a quote
+> 2. With \`inline code\`
 >
 > \`\`\`js
-> // até bloco de código aninhado
+> // even a nested code block
 > const x = 1;
 > \`\`\`
 >
-> | E | tabela |
-> |---|--------|
-> | a | b      |
+> | And | a table |
+> |-----|---------|
+> | a   | b       |
 
-- Item com **negrito** e [link](https://example.com)
-  - Subitem com \`código\`
-  - Subitem com ![mini](https://upload.wikimedia.org/wikipedia/commons/4/48/Markdown-mark.svg)
-- Item com bloco de código:
+- Item with **bold** and [link](https://example.com)
+  - Subitem with \`code\`
+  - Subitem with ![mini](https://upload.wikimedia.org/wikipedia/commons/4/48/Markdown-mark.svg)
+- Item with a code block:
 
   \`\`\`js
-  console.log('dentro da lista');
+  console.log('inside the list');
   \`\`\`
 
 ---
 
-Bom trabalho! ✍️
+Nice work! ✍️
 `;
 
       editor.value = defaultContent;
@@ -601,7 +601,7 @@ Bom trabalho! ✍️
           if (perm === 'granted') {
             await loadFromHandle(stored);
           } else if (perm === 'prompt') {
-            reopenMsg.textContent = `Reabrir "${stored.name}"?`;
+            reopenMsg.textContent = `Reopen "${stored.name}"?`;
             reopenBanner.style.display = 'flex';
             btnReopenYes.onclick = async () => {
               reopenBanner.style.display = 'none';
@@ -613,7 +613,7 @@ Bom trabalho! ✍️
           } else {
             await idbDel(IDB_KEY);
           }
-        } catch { /* handle revogado ou inexistente */ }
+        } catch { /* handle revoked or missing */ }
       })();
 
       /* ── Events ── */
@@ -737,10 +737,10 @@ Bom trabalho! ✍️
         try {
           await navigator.clipboard.writeText(preview.innerHTML);
           const original = btnCopy.textContent;
-          btnCopy.textContent = '✓ Copiado!';
-          setTimeout(() => { btnCopy.innerHTML = `<svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"/></svg> Copiar HTML`; }, 1800);
+          btnCopy.textContent = '✓ Copied!';
+          setTimeout(() => { btnCopy.innerHTML = `<svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"/></svg> Copy HTML`; }, 1800);
         } catch {
-          alert('Não foi possível acessar a área de transferência.');
+          alert('Could not access the clipboard.');
         }
       });
 
@@ -759,11 +759,11 @@ Bom trabalho! ✍️
         document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
         btnTheme.textContent = dark ? '☀️' : '🌙';
         hlTheme.href = dark
-          ? 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css'
-          : 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
+          ? 'vendor/css/highlight-github-dark.min.css'
+          : 'vendor/css/highlight-github.min.css';
         mdTheme.href = dark
-          ? 'https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown-dark.css'
-          : 'https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown-light.css';
+          ? 'vendor/css/github-markdown-dark.css'
+          : 'vendor/css/github-markdown-light.css';
         localStorage.setItem('md-theme', dark ? 'dark' : 'light');
       }
 
@@ -803,9 +803,9 @@ Bom trabalho! ✍️
       });
 
       /* ── Custom format buttons ──
-         Usa document.execCommand('insertText') porque é a única API que
-         integra com a pilha de undo nativa do textarea (Ctrl+Z funciona).
-         setRangeText e atribuição em .value NÃO geram entradas de undo. */
+         Uses document.execCommand('insertText') because it's the only API that
+         integrates with the textarea's native undo stack (Ctrl+Z works).
+         setRangeText and direct .value assignment do NOT create undo entries. */
       function wrap(prefix, suffix, placeholder = '') {
         editor.focus();
         const start = editor.selectionStart;
@@ -830,26 +830,26 @@ Bom trabalho! ✍️
       }
 
       const tableTemplate =
-        '| Coluna 1 | Coluna 2 | Coluna 3 |\n' +
+        '| Column 1 | Column 2 | Column 3 |\n' +
         '|----------|----------|----------|\n' +
-        '| valor    | valor    | valor    |\n' +
-        '| valor    | valor    | valor    |\n\n';
+        '| value    | value    | value    |\n' +
+        '| value    | value    | value    |\n\n';
 
       const detailsTemplate =
-        '<details>\n<summary>Clique para expandir</summary>\n\nConteúdo aqui.\n\n</details>\n\n';
+        '<details>\n<summary>Click to expand</summary>\n\nContent here.\n\n</details>\n\n';
 
       const customActions = {
-        'bold-italic': () => wrap('***', '***', 'texto'),
-        'codeblock':   () => wrap('\n```js\n', '\n```\n', 'código'),
+        'bold-italic': () => wrap('***', '***', 'text'),
+        'codeblock':   () => wrap('\n```js\n', '\n```\n', 'code'),
         'table':       () => insertBlock(tableTemplate, 2),
         'hr':          () => insertBlock('\n---\n\n'),
         'linebreak':   () => { wrap('  \n', '', ''); },
         'sub':         () => wrap('<sub>', '</sub>', '2'),
         'sup':         () => wrap('<sup>', '</sup>', '2'),
-        'mark':        () => wrap('<mark>', '</mark>', 'destaque'),
-        'ins':         () => wrap('<ins>', '</ins>', 'sublinhado'),
+        'mark':        () => wrap('<mark>', '</mark>', 'highlight'),
+        'ins':         () => wrap('<ins>', '</ins>', 'underline'),
         'kbd':         () => wrap('<kbd>', '</kbd>', 'Ctrl'),
-        'abbr':        () => wrap('<abbr title="significado">', '</abbr>', 'sigla'),
+        'abbr':        () => wrap('<abbr title="meaning">', '</abbr>', 'abbr'),
         'details':     () => insertBlock(detailsTemplate),
       };
 
