@@ -7,6 +7,8 @@ Editor de Markdown com preview em tempo real, direto no browser. Sem instalaçã
 - Preview em tempo real enquanto digita
 - Abre e salva arquivos `.md` diretamente no disco (File System Access API)
 - Reabre o último arquivo após F5
+- Barra de formatação completa: cabeçalhos H1–H6, negrito, itálico, tachado, código inline, citação, listas (com e sem ordem, tarefas), link, imagem, menção, referência (issue/PR), tabela, linha horizontal, sub/sobrescrito, destaque (`<mark>`), sublinhado (`<ins>`), tecla (`<kbd>`), abreviação (`<abbr>`) e bloco recolhível (`<details>`)
+- Bloco de código com seletor de linguagem
 - Syntax highlighting em blocos de código (highlight.js)
 - Tema claro / escuro (persiste entre sessões)
 - Scroll sincronizado entre editor e preview
@@ -20,6 +22,10 @@ Editor de Markdown com preview em tempo real, direto no browser. Sem instalaçã
 |---|---|
 | `Ctrl+S` | Salvar |
 | `Ctrl+O` | Abrir arquivo |
+| `Ctrl+B` | Negrito |
+| `Ctrl+I` | Itálico |
+| `Ctrl+E` | Código inline |
+| `Ctrl+K` | Link |
 | `Ctrl+Shift+D` | Alternar tema |
 | `Tab` | Inserir 2 espaços |
 
@@ -28,7 +34,6 @@ Editor de Markdown com preview em tempo real, direto no browser. Sem instalaçã
 ```
 index.html    — aplicação principal
 style.css     — layout e tema da interface
-markdown.css  — estilos do conteúdo renderizado (referência local, substituído pelo CDN)
 ```
 
 ## Dependências (CDN)

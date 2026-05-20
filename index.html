@@ -802,30 +802,31 @@ Bom trabalho! ✍️
         document.body.style.userSelect = '';
       });
 
-      /* ── Custom format buttons ── */
+      /* ── Custom format buttons ──
+         Usa document.execCommand('insertText') porque é a única API que
+         integra com a pilha de undo nativa do textarea (Ctrl+Z funciona).
+         setRangeText e atribuição em .value NÃO geram entradas de undo. */
       function wrap(prefix, suffix, placeholder = '') {
+        editor.focus();
         const start = editor.selectionStart;
         const end = editor.selectionEnd;
         const selected = editor.value.slice(start, end) || placeholder;
-        editor.setRangeText(prefix + selected + suffix, start, end, 'select');
+        document.execCommand('insertText', false, prefix + selected + suffix);
         editor.selectionStart = start + prefix.length;
         editor.selectionEnd = start + prefix.length + selected.length;
-        editor.focus();
-        editor.dispatchEvent(new Event('input', { bubbles: true }));
       }
 
       function insertBlock(text, innerCursor = null) {
+        editor.focus();
         const start = editor.selectionStart;
         const before = editor.value.slice(0, start);
         const needsNL = before.length > 0 && !before.endsWith('\n');
         const fullText = (needsNL ? '\n' : '') + text;
-        editor.setRangeText(fullText, start, editor.selectionEnd, 'end');
+        document.execCommand('insertText', false, fullText);
         if (innerCursor !== null) {
           const pos = start + (needsNL ? 1 : 0) + innerCursor;
           editor.selectionStart = editor.selectionEnd = pos;
         }
-        editor.focus();
-        editor.dispatchEvent(new Event('input', { bubbles: true }));
       }
 
       const tableTemplate =
