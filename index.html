@@ -186,9 +186,10 @@
         breaks: true,
         gfm: true,
         renderer: {
-          code({ text, lang }) {
+          code(code, infostring) {
+            const lang = (infostring || '').match(/\S*/)[0];
             const language = lang && hljs.getLanguage(lang) ? lang : 'plaintext';
-            const highlighted = hljs.highlight(text || '', { language }).value;
+            const highlighted = hljs.highlight(code || '', { language }).value;
             return `<pre><code class="hljs language-${language}">${highlighted}</code></pre>`;
           }
         }
@@ -232,33 +233,310 @@
 
 Escreva **Markdown** à esquerda e veja o resultado em tempo real à direita.
 
-## Funcionalidades
+---
 
-- Abertura e salvamento de arquivos \`.md\`
-- Syntax highlighting em blocos de código
-- Scroll sincronizado entre editor e preview
-- Modo escuro / claro
-- Contador de palavras, caracteres e linhas
+## 1. Cabeçalhos
 
-## Exemplo de código
+# H1 — Cabeçalho nível 1
+## H2 — Cabeçalho nível 2
+### H3 — Cabeçalho nível 3
+#### H4 — Cabeçalho nível 4
+##### H5 — Cabeçalho nível 5
+###### H6 — Cabeçalho nível 6
+
+Cabeçalho alternativo H1
+========================
+
+Cabeçalho alternativo H2
+------------------------
+
+---
+
+## 2. Ênfase e estilo de texto
+
+- **Negrito** ou __também negrito__
+- *Itálico* ou _também itálico_
+- ***Negrito e itálico*** ou ___combinados___
+- ~~Tachado~~ (strikethrough)
+- \`código inline\` com \`crases\`
+- Texto normal com <ins>sublinhado HTML</ins> e <mark>destaque</mark>
+- Subscrito: H<sub>2</sub>O — Sobrescrito: E = mc<sup>2</sup>
+- Escape de caracteres: \\*não é itálico\\* e \\\`não é código\\\`
+
+---
+
+## 3. Listas
+
+### Lista não ordenada
+
+- Item A
+- Item B
+  - Subitem B.1
+  - Subitem B.2
+    - Sub-subitem B.2.a
+- Item C
+
+* Também funciona com asterisco
++ Ou com sinal de mais
+
+### Lista ordenada
+
+1. Primeiro
+2. Segundo
+   1. Aninhado 2.1
+   2. Aninhado 2.2
+3. Terceiro
+4. Quarto
+
+### Lista de tarefas (task list)
+
+- [x] Tarefa concluída
+- [ ] Tarefa pendente
+- [] Atalho: colchetes vazios viram \`[ ]\` automaticamente
+- [x] Comprar leite
+  - [ ] Subtarefa pendente
+  - [x] Subtarefa feita
+
+---
+
+## 4. Links e imagens
+
+- Link simples: [Anthropic](https://www.anthropic.com)
+- Link com título: [Claude](https://claude.ai "Site oficial do Claude")
+- Link automático: <https://example.com>
+- Email: <contato@example.com>
+- Link de referência: [GitHub][gh-ref]
+
+[gh-ref]: https://github.com "Repositórios do mundo"
+
+Imagem:
+
+![Logo Markdown](https://upload.wikimedia.org/wikipedia/commons/4/48/Markdown-mark.svg)
+
+Imagem com link clicável:
+
+[![Logo Markdown](https://upload.wikimedia.org/wikipedia/commons/4/48/Markdown-mark.svg)](https://daringfireball.net/projects/markdown/)
+
+---
+
+## 5. Citações (blockquote)
+
+> Esta é uma citação simples.
+
+> Citação com **negrito** e *itálico*.
+>
+> Segundo parágrafo da mesma citação.
+
+> Nível 1
+>> Nível 2 (aninhado)
+>>> Nível 3
+>>>> Nível 4
+
+> 💡 **Dica:** você pode misturar listas dentro de citações:
+> - Item 1
+> - Item 2
+
+---
+
+## 6. Código
+
+### Inline
+Use \`const x = 42;\` para declarar uma constante.
+
+### Bloco simples
+
+\`\`\`
+Sem linguagem definida — apenas texto pré-formatado.
+  Espaços   e   indentação   preservados.
+\`\`\`
+
+### JavaScript
 
 \`\`\`javascript
 function hello(name) {
   return \`Olá, \${name}!\`;
 }
-
 console.log(hello('mundo'));
 \`\`\`
 
-## Tabela
+### Python
 
-| Atalho | Ação |
-|--------|------|
-| \`Ctrl+S\` | Salvar |
-| \`Ctrl+O\` | Abrir arquivo |
-| \`Ctrl+Shift+D\` | Alternar tema |
+\`\`\`python
+def fib(n):
+    a, b = 0, 1
+    for _ in range(n):
+        yield a
+        a, b = b, a + b
 
-> Dica: arraste a barra central para redimensionar os painéis.
+print(list(fib(10)))
+\`\`\`
+
+### Bash
+
+\`\`\`bash
+#!/usr/bin/env bash
+for file in *.md; do
+  echo "Processando $file"
+done
+\`\`\`
+
+### JSON
+
+\`\`\`json
+{
+  "name": "md-editor",
+  "version": "1.0.0",
+  "features": ["preview", "highlight", "sync-scroll"]
+}
+\`\`\`
+
+### HTML
+
+\`\`\`html
+<div class="card">
+  <h2>Olá, mundo!</h2>
+  <p>Conteúdo aqui.</p>
+</div>
+\`\`\`
+
+### CSS
+
+\`\`\`css
+.card {
+  padding: 1rem;
+  border-radius: 8px;
+  background: #f6f8fa;
+}
+\`\`\`
+
+### SQL
+
+\`\`\`sql
+SELECT id, name, email
+FROM users
+WHERE created_at > NOW() - INTERVAL '7 days'
+ORDER BY created_at DESC;
+\`\`\`
+
+### Diff
+
+\`\`\`diff
+- linha removida
++ linha adicionada
+  linha inalterada
+\`\`\`
+
+### Indentado (4 espaços)
+
+    Bloco de código por indentação
+    também funciona, sem highlight.
+
+---
+
+## 7. Tabelas
+
+### Tabela básica
+
+| Atalho          | Ação                |
+|-----------------|---------------------|
+| \`Ctrl+S\`        | Salvar              |
+| \`Ctrl+O\`        | Abrir arquivo       |
+| \`Ctrl+Shift+D\`  | Alternar tema       |
+
+### Tabela com alinhamento
+
+| Esquerda  | Centro      | Direita |
+|:----------|:-----------:|--------:|
+| linha 1   | valor       |   1,00  |
+| linha 22  | outro       |  22,50  |
+| linha 333 | algo grande | 333,75  |
+
+### Tabela com formatação interna
+
+| Linguagem | Exemplo                 | Popular? |
+|-----------|-------------------------|:--------:|
+| **JS**    | \`console.log('oi')\`     |    ✅    |
+| **Py**    | \`print("oi")\`           |    ✅    |
+| ~~COBOL~~ | *legado*                |    ❌    |
+
+---
+
+## 8. Linha horizontal
+
+Três ou mais hifens, asteriscos ou underscores:
+
+---
+
+***
+
+___
+
+---
+
+## 9. HTML embutido
+
+<details>
+<summary>Clique para expandir 👇</summary>
+
+Conteúdo escondido dentro de \`<details>\`. Pode conter **markdown** também:
+
+- item 1
+- item 2
+
+</details>
+
+<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> abre a paleta de comandos.
+
+<abbr title="HyperText Markup Language">HTML</abbr> é uma sigla.
+
+---
+
+## 10. Quebras de linha e parágrafos
+
+Esta linha termina com dois espaços no final
+e quebra aqui (line break).
+
+Esta é uma nova
+linha sem quebra explícita — pode virar quebra dependendo da configuração.
+
+Parágrafo separado por linha em branco acima.
+
+---
+
+## 11. Emojis e caracteres especiais
+
+🚀 🎉 ✨ 🔥 ✍️ 💡 ✅ ❌ 📝 📦 🐛 🧪
+
+Setas: → ← ↑ ↓ ⇒ ⇐
+Símbolos: © ® ™ § ¶ † ‡ • … « »
+Matemática: ± × ÷ ≠ ≈ ≤ ≥ ∞ √ π Σ
+
+---
+
+## 12. Combinações avançadas
+
+> ### Citação com cabeçalho
+>
+> 1. Lista ordenada dentro de citação
+> 2. Com \`código inline\`
+>
+> \`\`\`js
+> // até bloco de código aninhado
+> const x = 1;
+> \`\`\`
+>
+> | E | tabela |
+> |---|--------|
+> | a | b      |
+
+- Item com **negrito** e [link](https://example.com)
+  - Subitem com \`código\`
+  - Subitem com ![mini](https://upload.wikimedia.org/wikipedia/commons/4/48/Markdown-mark.svg)
+- Item com bloco de código:
+
+  \`\`\`js
+  console.log('dentro da lista');
+  \`\`\`
 
 ---
 
