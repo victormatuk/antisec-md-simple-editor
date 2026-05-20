@@ -17,6 +17,7 @@
   <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@github/markdown-toolbar-element@2/dist/index.js"></script>
 </head>
 
 <body>
@@ -86,6 +87,44 @@
           <span>Editor</span>
           <span id="filename-label">novo-arquivo.md</span>
         </div>
+        <markdown-toolbar for="editor" id="format-bar">
+          <md-header level="1" class="fb-btn" title="Cabeçalho 1">H1</md-header>
+          <md-header level="2" class="fb-btn" title="Cabeçalho 2">H2</md-header>
+          <md-header level="3" class="fb-btn" title="Cabeçalho 3">H3</md-header>
+          <md-header level="4" class="fb-btn" title="Cabeçalho 4">H4</md-header>
+          <md-header level="5" class="fb-btn" title="Cabeçalho 5">H5</md-header>
+          <md-header level="6" class="fb-btn" title="Cabeçalho 6">H6</md-header>
+          <span class="fb-sep"></span>
+          <md-bold class="fb-btn" title="Negrito (Ctrl+B)"><strong>B</strong></md-bold>
+          <md-italic class="fb-btn" title="Itálico (Ctrl+I)"><em>I</em></md-italic>
+          <md-strikethrough class="fb-btn" title="Tachado"><s>S</s></md-strikethrough>
+          <md-code class="fb-btn" title="Código inline (Ctrl+E)">&lt;/&gt;</md-code>
+          <span class="fb-sep"></span>
+          <md-quote class="fb-btn" title="Citação">&ldquo; &rdquo;</md-quote>
+          <md-unordered-list class="fb-btn" title="Lista">• ─</md-unordered-list>
+          <md-ordered-list class="fb-btn" title="Lista numerada">1. 2.</md-ordered-list>
+          <md-task-list class="fb-btn" title="Lista de tarefas">[ ]</md-task-list>
+          <span class="fb-sep"></span>
+          <md-link class="fb-btn" title="Link (Ctrl+K)">link</md-link>
+          <md-image class="fb-btn" title="Imagem">img</md-image>
+          <span class="fb-sep"></span>
+          <md-mention class="fb-btn" title="Menção">@</md-mention>
+          <md-ref class="fb-btn" title="Referência (issue/PR)">#</md-ref>
+          <span class="fb-sep"></span>
+          <button type="button" class="fb-btn fb-custom" data-action="bold-italic" title="Negrito + itálico">B<em>I</em></button>
+          <button type="button" class="fb-btn fb-custom" data-action="codeblock" title="Bloco de código (com linguagem)">{ }</button>
+          <button type="button" class="fb-btn fb-custom" data-action="table" title="Inserir tabela">▦</button>
+          <button type="button" class="fb-btn fb-custom" data-action="hr" title="Linha horizontal">―</button>
+          <button type="button" class="fb-btn fb-custom" data-action="linebreak" title="Quebra de linha (2 espaços + enter)">↵</button>
+          <span class="fb-sep"></span>
+          <button type="button" class="fb-btn fb-custom" data-action="sub" title="Subscrito">X₂</button>
+          <button type="button" class="fb-btn fb-custom" data-action="sup" title="Sobrescrito">X²</button>
+          <button type="button" class="fb-btn fb-custom" data-action="mark" title="Destaque (&lt;mark&gt;)">mk</button>
+          <button type="button" class="fb-btn fb-custom" data-action="ins" title="Sublinhado (&lt;ins&gt;)">U</button>
+          <button type="button" class="fb-btn fb-custom" data-action="kbd" title="Tecla (&lt;kbd&gt;)">⌨</button>
+          <button type="button" class="fb-btn fb-custom" data-action="abbr" title="Abreviação (&lt;abbr&gt;)">ab</button>
+          <button type="button" class="fb-btn fb-custom" data-action="details" title="Bloco recolhível (&lt;details&gt;)">▾</button>
+        </markdown-toolbar>
         <textarea id="editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
       </div>
 
@@ -761,6 +800,63 @@ Bom trabalho! ✍️
         resizer.classList.remove('dragging');
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
+      });
+
+      /* ── Custom format buttons ── */
+      function wrap(prefix, suffix, placeholder = '') {
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        const selected = editor.value.slice(start, end) || placeholder;
+        editor.setRangeText(prefix + selected + suffix, start, end, 'select');
+        editor.selectionStart = start + prefix.length;
+        editor.selectionEnd = start + prefix.length + selected.length;
+        editor.focus();
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      function insertBlock(text, innerCursor = null) {
+        const start = editor.selectionStart;
+        const before = editor.value.slice(0, start);
+        const needsNL = before.length > 0 && !before.endsWith('\n');
+        const fullText = (needsNL ? '\n' : '') + text;
+        editor.setRangeText(fullText, start, editor.selectionEnd, 'end');
+        if (innerCursor !== null) {
+          const pos = start + (needsNL ? 1 : 0) + innerCursor;
+          editor.selectionStart = editor.selectionEnd = pos;
+        }
+        editor.focus();
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      const tableTemplate =
+        '| Coluna 1 | Coluna 2 | Coluna 3 |\n' +
+        '|----------|----------|----------|\n' +
+        '| valor    | valor    | valor    |\n' +
+        '| valor    | valor    | valor    |\n\n';
+
+      const detailsTemplate =
+        '<details>\n<summary>Clique para expandir</summary>\n\nConteúdo aqui.\n\n</details>\n\n';
+
+      const customActions = {
+        'bold-italic': () => wrap('***', '***', 'texto'),
+        'codeblock':   () => wrap('\n```js\n', '\n```\n', 'código'),
+        'table':       () => insertBlock(tableTemplate, 2),
+        'hr':          () => insertBlock('\n---\n\n'),
+        'linebreak':   () => { wrap('  \n', '', ''); },
+        'sub':         () => wrap('<sub>', '</sub>', '2'),
+        'sup':         () => wrap('<sup>', '</sup>', '2'),
+        'mark':        () => wrap('<mark>', '</mark>', 'destaque'),
+        'ins':         () => wrap('<ins>', '</ins>', 'sublinhado'),
+        'kbd':         () => wrap('<kbd>', '</kbd>', 'Ctrl'),
+        'abbr':        () => wrap('<abbr title="significado">', '</abbr>', 'sigla'),
+        'details':     () => insertBlock(detailsTemplate),
+      };
+
+      document.querySelectorAll('#format-bar .fb-custom').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const fn = customActions[btn.dataset.action];
+          if (fn) fn();
+        });
       });
 
       /* ── Keyboard shortcuts ── */

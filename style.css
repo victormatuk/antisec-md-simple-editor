@@ -209,6 +209,54 @@ button svg {
   user-select: none;
 }
 
+/* ─── Format bar (markdown-toolbar) ───────────────────── */
+
+#format-bar {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 10px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+#format-bar .fb-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+#format-bar .fb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 26px;
+  padding: 0 7px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  border-radius: 5px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+#format-bar .fb-btn:hover {
+  background: var(--btn-hover);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+#format-bar .fb-btn strong { font-weight: 700; }
+#format-bar .fb-btn em { font-style: italic; font-family: Georgia, "Times New Roman", serif; }
+#format-bar .fb-btn s { text-decoration: line-through; }
+
 /* ─── Editor ──────────────────────────────────────────── */
 
 #editor {
