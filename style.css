@@ -358,6 +358,35 @@ button svg {
   font-weight: 700;
 }
 
+.save-feedback {
+  color: var(--accent) !important;
+  font-weight: 600;
+}
+
+/* ─── Notify badge ────────────────────────────────────── */
+
+.notify-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: var(--btn-bg);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 0.85em;
+  font-family: inherit;
+  vertical-align: baseline;
+}
+
+.notify-badge-err {
+  border-color: #cf222e;
+  color: #cf222e;
+}
+
+[data-theme="dark"] .notify-badge-err {
+  border-color: #f85149;
+  color: #f85149;
+}
+
 /* ─── Responsive ──────────────────────────────────────── */
 
 @media (max-width: 640px) {

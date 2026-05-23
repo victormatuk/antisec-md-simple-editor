@@ -15,6 +15,39 @@ Editor de Markdown com preview em tempo real, direto no browser. Sem instalaçã
 - Painéis redimensionáveis
 - Contador de palavras, caracteres, linhas e tempo de leitura
 - Copiar HTML gerado
+- Notificações agendadas via `@notify(...)` (lembretes nativos do Chrome)
+
+## Notificações `@notify(...)`
+
+Você pode incluir lembretes diretamente no markdown. Ao salvar o arquivo (Ctrl+S), o editor agenda uma notificação nativa do navegador para cada `@notify(...)` válido. Os agendamentos sobrevivem a recarregar a página (são persistidos no IndexedDB).
+
+Sintaxe: `@notify(QUANDO, TEXTO)`
+
+`QUANDO` aceita duas formas:
+
+**Duração relativa** — combinação de tokens com as unidades curtas `s` (segundos), `m` (minutos), `h` (horas):
+
+| Exemplo | Significado |
+|---|---|
+| `@notify(30s, Verificar o forno)` | 30 segundos |
+| `@notify(30m, Tomar água)` | 30 minutos |
+| `@notify(2h, Almoço)` | 2 horas |
+| `@notify(1h30, Voltar para a reunião)` | 1h30min (número solto depois de `h` = minutos) |
+| `@notify(2h30m, Reunião)` | 2h e 30min |
+| `@notify(2h30m40s, Reunião curta)` | 2h, 30min e 40s |
+
+**Timestamp absoluto** — `YYYYMMDD HH:MM` (segundos opcionais):
+
+| Exemplo | Significado |
+|---|---|
+| `@notify(20260522 21:07, Sair)` | dispara em 22/05/2026 às 21:07 |
+| `@notify(20260522 21:07:20, Sair)` | precisão em segundos |
+
+Formas longas como `30min`, `30sec` ou `1hour` **não** são aceitas — aparecem em vermelho no preview e não são agendadas. Timestamps no passado também são ignorados.
+
+Quando salvo, o badge no preview ganha cor de destaque (`⏰ spec · texto`) e aparece um aviso curto `✓ N lembrete(s) agendado(s)`. Notificações idênticas (mesmo `QUANDO` + mesmo `TEXTO`) só agendam uma vez; basta variar o texto para criar várias.
+
+Requisitos: a Notification API precisa de contexto seguro — funciona via `localhost` (use `python3 serve.py`) ou HTTPS. O navegador pedirá permissão na primeira vez.
 
 ## Atalhos
 

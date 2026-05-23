@@ -25,7 +25,7 @@
 
     <!-- ── Toolbar ── -->
     <div id="toolbar">
-      <span class="logo">MD Editor</span>
+      <span class="logo">MD Editor v1.1</span>
       <div class="sep"></div>
 
       <button id="btn-open" title="Open file (Ctrl+O)">
@@ -183,6 +183,7 @@
 
       /* ── IndexedDB helper (persists fileHandle across reloads) ── */
       const IDB_NAME = 'md-editor', IDB_STORE = 'state', IDB_KEY = 'fileHandle';
+      const IDB_NOTIFS_KEY = 'scheduledNotifications';
 
       function idbOpen() {
         return new Promise((res, rej) => {
@@ -220,6 +221,111 @@
         });
       }
 
+      /* ── Save feedback (shown briefly in the unsaved-dot slot) ── */
+      let saveFeedbackTimer = null;
+      function showSaveFeedback(msg) {
+        if (saveFeedbackTimer) clearTimeout(saveFeedbackTimer);
+        unsavedDot.textContent = msg;
+        unsavedDot.className = 'save-feedback';
+        saveFeedbackTimer = setTimeout(() => {
+          saveFeedbackTimer = null;
+          render();
+        }, 2200);
+      }
+
+      /* ── Notifications: parser, persistence, scheduling ── */
+      const NOTIFY_RE = /@notify\(\s*([0-9a-zA-Z: ]+?)\s*,\s*([^)]+?)\s*\)/g;
+
+      function parseWhen(spec, now = Date.now()) {
+        const abs = spec.match(/^(\d{4})(\d{2})(\d{2})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+        if (abs) {
+          const [, Y, Mo, D, H, Mi, S] = abs;
+          const t = new Date(+Y, +Mo - 1, +D, +H, +Mi, S ? +S : 0, 0).getTime();
+          return Number.isNaN(t) ? null : t;
+        }
+        const norm = spec.replace(/(\d+\s*h)\s*(\d+)(?!\s*[hms])/gi, '$1$2m');
+        if (!/^(?:\s*\d+\s*[hms]\s*)+$/i.test(norm)) return null;
+
+        let total = 0, m;
+        const re = /(\d+)\s*([hms])/gi;
+        while ((m = re.exec(norm)) !== null) {
+          const n = parseInt(m[1], 10);
+          const u = m[2].toLowerCase();
+          if (u === 'h') total += n * 3600000;
+          else if (u === 'm') total += n * 60000;
+          else if (u === 's') total += n * 1000;
+        }
+        if (total <= 0) return null;
+        return now + total;
+      }
+
+      async function notifId(spec, text) {
+        const data = new TextEncoder().encode(`${spec}|${text}`);
+        const hash = await crypto.subtle.digest('SHA-256', data);
+        return Array.from(new Uint8Array(hash).slice(0, 8))
+          .map(b => b.toString(16).padStart(2, '0')).join('');
+      }
+
+      async function loadScheduledNotifs() {
+        return (await idbGet(IDB_NOTIFS_KEY)) || [];
+      }
+
+      async function saveScheduledNotifs(list) {
+        await idbSet(IDB_NOTIFS_KEY, list);
+      }
+
+      const activeTimers = new Map();
+
+      function armTimer(id, text, firesAt) {
+        if (activeTimers.has(id)) clearTimeout(activeTimers.get(id));
+        const delay = Math.max(0, firesAt - Date.now());
+        const tid = setTimeout(() => fireNotification(id, text), delay);
+        activeTimers.set(id, tid);
+      }
+
+      async function fireNotification(id, text) {
+        activeTimers.delete(id);
+        try { new Notification('MD Editor', { body: text }); } catch {}
+        const list = (await loadScheduledNotifs()).filter(n => n.id !== id);
+        await saveScheduledNotifs(list);
+      }
+
+      async function scheduleNotificationsFromText(text) {
+        if (!('Notification' in window)) return 0;
+        const matches = [...text.matchAll(NOTIFY_RE)];
+        if (matches.length === 0) return 0;
+
+        if (Notification.permission === 'default') {
+          const perm = await Notification.requestPermission();
+          if (perm !== 'granted') return 0;
+        }
+        if (Notification.permission !== 'granted') return 0;
+
+        const existing = await loadScheduledNotifs();
+        const existingIds = new Set(existing.map(n => n.id));
+        const now = Date.now();
+        let added = 0;
+
+        for (const m of matches) {
+          const spec = m[1].trim();
+          const txt = m[2].trim();
+          const firesAt = parseWhen(spec, now);
+          if (firesAt == null) continue;
+          if (firesAt <= now) continue;
+
+          const id = await notifId(spec, txt);
+          if (existingIds.has(id)) continue;
+
+          existing.push({ id, text: txt, spec, scheduledAt: now, firesAt });
+          existingIds.add(id);
+          armTimer(id, txt, firesAt);
+          added++;
+        }
+
+        if (added > 0) await saveScheduledNotifs(existing);
+        return added;
+      }
+
       /* ── marked config ── */
       marked.use({
         breaks: true,
@@ -235,9 +341,24 @@
       });
 
       /* ── Render ── */
+      function escapeHtml(s) {
+        return s.replace(/[&<>"']/g, c => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+      }
+
       function preprocessMarkdown(src) {
         // Accepts "[]" as shorthand for "[ ]" in task lists (GFM requires the space).
-        return src.replace(/^(\s*[-*+]\s+)\[\](?=\s|$)/gm, '$1[ ]');
+        src = src.replace(/^(\s*[-*+]\s+)\[\](?=\s|$)/gm, '$1[ ]');
+        // Turn @notify(spec, text) into a badge before marked sees it.
+        src = src.replace(NOTIFY_RE, (_, spec, text) => {
+          const s = spec.trim(), t = text.trim();
+          const firesAt = parseWhen(s);
+          const ok = firesAt != null && firesAt > Date.now();
+          const cls = ok ? 'notify-badge' : 'notify-badge notify-badge-err';
+          return `<span class="${cls}">⏰ ${escapeHtml(s)} · ${escapeHtml(t)}</span>`;
+        });
+        return src;
       }
 
       function render() {
@@ -616,6 +737,13 @@ Nice work! ✍️
         } catch { /* handle revoked or missing */ }
       })();
 
+      /* ── Restore scheduled notifications on load ── */
+      (async () => {
+        if (!('Notification' in window)) return;
+        const list = await loadScheduledNotifs();
+        for (const n of list) armTimer(n.id, n.text, n.firesAt);
+      })();
+
       /* ── Events ── */
       editor.addEventListener('input', render);
 
@@ -685,49 +813,60 @@ Nice work! ✍️
       /* ── Save file ── */
       async function saveFile() {
         const content = editor.value;
+        let written = false;
 
         if (fileHandle) {
           try {
             const writable = await fileHandle.createWritable();
             await writable.write(content);
             await writable.close();
-            savedContent = content;
-            render();
-            return;
+            written = true;
           } catch (err) {
             if (err.name !== 'AbortError') console.error(err);
           }
         }
 
-        if ('showSaveFilePicker' in window) {
-          try {
-            const handle = await window.showSaveFilePicker({
-              suggestedName: currentFilename,
-              types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md', '.markdown'] } }]
-            });
-            fileHandle = handle;
-            await idbSet(IDB_KEY, handle);
-            currentFilename = (await handle.getFile()).name;
-            filenameLabel.textContent = currentFilename;
-            const writable = await handle.createWritable();
-            await writable.write(content);
-            await writable.close();
-          } catch (err) {
-            if (err.name === 'AbortError') return;
-            console.error(err);
+        if (!written) {
+          if ('showSaveFilePicker' in window) {
+            try {
+              const handle = await window.showSaveFilePicker({
+                suggestedName: currentFilename,
+                types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md', '.markdown'] } }]
+              });
+              fileHandle = handle;
+              await idbSet(IDB_KEY, handle);
+              currentFilename = (await handle.getFile()).name;
+              filenameLabel.textContent = currentFilename;
+              const writable = await handle.createWritable();
+              await writable.write(content);
+              await writable.close();
+              written = true;
+            } catch (err) {
+              if (err.name === 'AbortError') return;
+              console.error(err);
+            }
+          } else {
+            const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = currentFilename;
+            a.click();
+            URL.revokeObjectURL(url);
+            written = true;
           }
-        } else {
-          const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = currentFilename;
-          a.click();
-          URL.revokeObjectURL(url);
         }
+
+        if (!written) return;
 
         savedContent = content;
         render();
+
+        const added = await scheduleNotificationsFromText(content);
+        if (added > 0) {
+          const plural = added > 1 ? 's' : '';
+          showSaveFeedback(`✓ ${added} lembrete${plural} agendado${plural}`);
+        }
       }
 
       btnSave.addEventListener('click', saveFile);
