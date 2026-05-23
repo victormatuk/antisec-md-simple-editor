@@ -55,6 +55,10 @@ Quando salvo, o badge no preview ganha cor de destaque (`⏰ spec · texto`) e a
 
 **Ver pendentes:** clique no ícone de sino na toolbar para abrir o painel com todos os lembretes agendados, mostrando o texto, o tempo restante (`em 5m 30s`) e o horário absoluto (`23/05 21:07`).
 
+**Não some sozinho:** as notificações usam `requireInteraction`, ou seja, ficam visíveis até você clicar ou descartar manualmente — assim você não perde o lembrete se estiver longe do computador.
+
+**Som opcional:** dentro do painel de lembretes tem um toggle `🔔` / `🔕`. Quando ligado, dispara um bip curto (dois tons via Web Audio) junto com a notificação. A preferência é salva no localStorage. Clicar pra ligar também toca um preview do som.
+
 **Inserir rapidamente:** clique no botão `⏰` no final do format bar ou digite `@` no editor — o autocomplete mostra os comandos disponíveis (no momento só `@notify`); Enter ou Tab insere o template `@notify(30m, texto)` com `texto` pronto pra ser substituído.
 
 Requisitos: a Notification API precisa de contexto seguro — funciona via `localhost` (use `python3 serve.py`), HTTPS ou direto pelo [demo](https://victormatuk.github.io/antisec-md-simple-editor/). O navegador pedirá permissão na primeira vez.

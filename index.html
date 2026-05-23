@@ -25,7 +25,7 @@
 
     <!-- ── Toolbar ── -->
     <div id="toolbar">
-      <span class="logo">MD Editor v1.2</span>
+      <span class="logo">MD Editor v1.21</span>
       <div class="sep"></div>
 
       <button id="btn-open" title="Open file (Ctrl+O)">
@@ -74,7 +74,10 @@
           <span id="btn-notifs-count"></span>
         </button>
         <div id="notifs-panel" style="display:none">
-          <div class="notifs-panel-header">Lembretes agendados</div>
+          <div class="notifs-panel-header">
+            <span>Lembretes agendados</span>
+            <button id="btn-notif-sound" type="button" title="Som ao disparar lembrete">🔔</button>
+          </div>
           <ul id="notifs-list"></ul>
           <div class="notifs-panel-hint">Para cancelar, apague o <code>@notify(...)</code> do texto e salve.</div>
         </div>
@@ -203,6 +206,7 @@
       const btnNotifsCount = document.getElementById('btn-notifs-count');
       const notifsPanel = document.getElementById('notifs-panel');
       const notifsList = document.getElementById('notifs-list');
+      const btnNotifSound = document.getElementById('btn-notif-sound');
 
       /* ── IndexedDB helper (persists fileHandle across reloads) ── */
       const IDB_NAME = 'md-editor', IDB_STORE = 'state', IDB_KEY = 'fileHandle';
@@ -315,10 +319,40 @@
 
       async function fireNotification(id, text) {
         activeTimers.delete(id);
-        try { new Notification('MD Editor', { body: text }); } catch {}
+        try {
+          new Notification('MD Editor', { body: text, requireInteraction: true, tag: id });
+        } catch {}
+        playNotificationSound();
         const list = (await loadScheduledNotifs()).filter(n => n.id !== id);
         await saveScheduledNotifs(list);
         refreshNotifsCount();
+      }
+
+      /* ── Notification sound (Web Audio, lazy) ── */
+      let soundEnabled = localStorage.getItem('notifSoundEnabled') !== '0';
+      let audioCtx = null;
+
+      function playNotificationSound() {
+        if (!soundEnabled) return;
+        try {
+          if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          if (audioCtx.state === 'suspended') audioCtx.resume();
+          const now = audioCtx.currentTime;
+          // Two short tones (880 → 660 Hz) with quick fade in/out to avoid click.
+          [{ f: 880, t: 0 }, { f: 660, t: 0.18 }].forEach(({ f, t }) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = f;
+            gain.gain.setValueAtTime(0, now + t);
+            gain.gain.linearRampToValueAtTime(0.18, now + t + 0.02);
+            gain.gain.linearRampToValueAtTime(0, now + t + 0.16);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now + t);
+            osc.stop(now + t + 0.17);
+          });
+        } catch { /* audio blocked or unsupported */ }
       }
 
       async function scheduleNotificationsFromText(text) {
@@ -869,6 +903,24 @@ Nice work! ✍️
             !btnNotifs.contains(e.target)) {
           closeNotifsPanel();
         }
+      });
+
+      /* ── Sound toggle ── */
+      function refreshSoundButton() {
+        btnNotifSound.textContent = soundEnabled ? '🔔' : '🔕';
+        btnNotifSound.classList.toggle('muted', !soundEnabled);
+        btnNotifSound.title = soundEnabled
+          ? 'Som ligado — clique para silenciar'
+          : 'Som desligado — clique para ligar';
+      }
+      refreshSoundButton();
+
+      btnNotifSound.addEventListener('click', (e) => {
+        e.stopPropagation();
+        soundEnabled = !soundEnabled;
+        localStorage.setItem('notifSoundEnabled', soundEnabled ? '1' : '0');
+        refreshSoundButton();
+        if (soundEnabled) playNotificationSound();   // preview do som ao ligar
       });
 
       /* ── Events ── */
