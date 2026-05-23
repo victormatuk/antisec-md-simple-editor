@@ -2,6 +2,8 @@
 
 Editor de Markdown com preview em tempo real, direto no browser. Sem instalação, sem build — abre o `index.html` e usa.
 
+**Demo online:** <https://victormatuk.github.io/antisec-md-simple-editor/>
+
 ## Funcionalidades
 
 - Preview em tempo real enquanto digita
@@ -16,6 +18,8 @@ Editor de Markdown com preview em tempo real, direto no browser. Sem instalaçã
 - Contador de palavras, caracteres, linhas e tempo de leitura
 - Copiar HTML gerado
 - Notificações agendadas via `@notify(...)` (lembretes nativos do Chrome)
+- Painel de lembretes pendentes na toolbar (ícone de sino), com contagem e tempo restante
+- Autocomplete de comandos: digite `@` no editor para inserir um template (Enter ou Tab confirma)
 
 ## Notificações `@notify(...)`
 
@@ -45,9 +49,15 @@ Sintaxe: `@notify(QUANDO, TEXTO)`
 
 Formas longas como `30min`, `30sec` ou `1hour` **não** são aceitas — aparecem em vermelho no preview e não são agendadas. Timestamps no passado também são ignorados.
 
-Quando salvo, o badge no preview ganha cor de destaque (`⏰ spec · texto`) e aparece um aviso curto `✓ N lembrete(s) agendado(s)`. Notificações idênticas (mesmo `QUANDO` + mesmo `TEXTO`) só agendam uma vez; basta variar o texto para criar várias.
+Quando salvo, o badge no preview ganha cor de destaque (`⏰ spec · texto`) e aparece um aviso curto `✓ N agendado(s) · ✗ N cancelado(s)`. Notificações idênticas (mesmo `QUANDO` + mesmo `TEXTO`) só agendam uma vez; basta variar o texto para criar várias.
 
-Requisitos: a Notification API precisa de contexto seguro — funciona via `localhost` (use `python3 serve.py`) ou HTTPS. O navegador pedirá permissão na primeira vez.
+**Cancelar:** apague o `@notify(...)` correspondente do texto e salve novamente.
+
+**Ver pendentes:** clique no ícone de sino na toolbar para abrir o painel com todos os lembretes agendados, mostrando o texto, o tempo restante (`em 5m 30s`) e o horário absoluto (`23/05 21:07`).
+
+**Inserir rapidamente:** clique no botão `⏰` no final do format bar ou digite `@` no editor — o autocomplete mostra os comandos disponíveis (no momento só `@notify`); Enter ou Tab insere o template `@notify(30m, texto)` com `texto` pronto pra ser substituído.
+
+Requisitos: a Notification API precisa de contexto seguro — funciona via `localhost` (use `python3 serve.py`), HTTPS ou direto pelo [demo](https://victormatuk.github.io/antisec-md-simple-editor/). O navegador pedirá permissão na primeira vez.
 
 ## Atalhos
 
