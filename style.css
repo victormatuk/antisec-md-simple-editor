@@ -363,6 +363,148 @@ button svg {
   font-weight: 600;
 }
 
+/* ─── Notifications panel ─────────────────────────────── */
+
+#notifs-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+#btn-notifs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#btn-notifs-count {
+  font-size: 0.75em;
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 0.8em;
+  text-align: right;
+}
+
+#btn-notifs-count:empty {
+  display: none;
+}
+
+#notifs-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 280px;
+  max-width: 380px;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px var(--shadow);
+  padding: 8px 0;
+  z-index: 100;
+}
+
+.notifs-panel-header {
+  padding: 4px 12px 8px;
+  font-weight: 600;
+  font-size: 0.9em;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
+#notifs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+#notifs-list li {
+  padding: 6px 12px;
+  font-size: 0.85em;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+#notifs-list li:last-child {
+  border-bottom: none;
+}
+
+.notif-text {
+  color: var(--text);
+  word-break: break-word;
+}
+
+.notif-when {
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+}
+
+.notifs-empty {
+  padding: 12px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
+
+.notifs-panel-hint {
+  padding: 8px 12px 4px;
+  font-size: 0.75em;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+
+.notifs-panel-hint code {
+  background: var(--code-bg);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* ─── Autocomplete dropdown ───────────────────────────── */
+
+#autocomplete {
+  position: fixed;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px var(--shadow);
+  z-index: 1000;
+  min-width: 220px;
+  max-width: 320px;
+  overflow: hidden;
+  padding: 4px 0;
+}
+
+.ac-item {
+  padding: 6px 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ac-item.selected,
+.ac-item:hover {
+  background: var(--btn-hover);
+}
+
+.ac-name {
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+  font-weight: 600;
+}
+
+.ac-desc {
+  color: var(--text-muted);
+  font-size: 0.78em;
+}
+
 /* ─── Notify badge ────────────────────────────────────── */
 
 .notify-badge {

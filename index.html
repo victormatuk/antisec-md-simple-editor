@@ -25,7 +25,7 @@
 
     <!-- ── Toolbar ── -->
     <div id="toolbar">
-      <span class="logo">MD Editor v1.1</span>
+      <span class="logo">MD Editor v1.2</span>
       <div class="sep"></div>
 
       <button id="btn-open" title="Open file (Ctrl+O)">
@@ -65,6 +65,20 @@
       </button>
 
       <div class="spacer"></div>
+
+      <div id="notifs-wrap">
+        <button id="btn-notifs" title="Lembretes agendados">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 16a2 2 0 0 0 1.985-1.75c.017-.137-.097-.25-.235-.25h-3.5c-.138 0-.252.113-.235.25A2 2 0 0 0 8 16ZM3 5a5 5 0 0 1 10 0v2.947c0 .05.015.098.042.139l1.703 2.555A1.519 1.519 0 0 1 13.482 13H2.518a1.516 1.516 0 0 1-1.263-2.36l1.703-2.554A.255.255 0 0 0 3 7.947Z"/>
+          </svg>
+          <span id="btn-notifs-count"></span>
+        </button>
+        <div id="notifs-panel" style="display:none">
+          <div class="notifs-panel-header">Lembretes agendados</div>
+          <ul id="notifs-list"></ul>
+          <div class="notifs-panel-hint">Para cancelar, apague o <code>@notify(...)</code> do texto e salve.</div>
+        </div>
+      </div>
 
       <button id="btn-theme" title="Toggle theme (Ctrl+Shift+D)">🌙</button>
 
@@ -124,6 +138,8 @@
           <button type="button" class="fb-btn fb-custom" data-action="kbd" title="Key (&lt;kbd&gt;)">⌨</button>
           <button type="button" class="fb-btn fb-custom" data-action="abbr" title="Abbreviation (&lt;abbr&gt;)">ab</button>
           <button type="button" class="fb-btn fb-custom" data-action="details" title="Collapsible block (&lt;details&gt;)">▾</button>
+          <span class="fb-sep"></span>
+          <button type="button" class="fb-btn fb-custom" data-action="notify" title="Lembrete @notify(30m, texto)">⏰</button>
         </markdown-toolbar>
         <textarea id="editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
       </div>
@@ -138,6 +154,9 @@
         <div id="preview" class="markdown-body"></div>
       </div>
     </div>
+
+    <!-- ── Autocomplete dropdown ── -->
+    <div id="autocomplete" style="display:none"></div>
 
     <!-- ── Status bar ── -->
     <div id="statusbar">
@@ -180,6 +199,10 @@
       const statTime = document.getElementById('stat-time');
       const filenameLabel = document.getElementById('filename-label');
       const unsavedDot = document.getElementById('unsaved-dot');
+      const btnNotifs = document.getElementById('btn-notifs');
+      const btnNotifsCount = document.getElementById('btn-notifs-count');
+      const notifsPanel = document.getElementById('notifs-panel');
+      const notifsList = document.getElementById('notifs-list');
 
       /* ── IndexedDB helper (persists fileHandle across reloads) ── */
       const IDB_NAME = 'md-editor', IDB_STORE = 'state', IDB_KEY = 'fileHandle';
@@ -283,47 +306,70 @@
         activeTimers.set(id, tid);
       }
 
+      function cancelTimer(id) {
+        if (activeTimers.has(id)) {
+          clearTimeout(activeTimers.get(id));
+          activeTimers.delete(id);
+        }
+      }
+
       async function fireNotification(id, text) {
         activeTimers.delete(id);
         try { new Notification('MD Editor', { body: text }); } catch {}
         const list = (await loadScheduledNotifs()).filter(n => n.id !== id);
         await saveScheduledNotifs(list);
+        refreshNotifsCount();
       }
 
       async function scheduleNotificationsFromText(text) {
-        if (!('Notification' in window)) return 0;
+        if (!('Notification' in window)) return { added: 0, removed: 0 };
         const matches = [...text.matchAll(NOTIFY_RE)];
-        if (matches.length === 0) return 0;
-
-        if (Notification.permission === 'default') {
-          const perm = await Notification.requestPermission();
-          if (perm !== 'granted') return 0;
-        }
-        if (Notification.permission !== 'granted') return 0;
 
         const existing = await loadScheduledNotifs();
-        const existingIds = new Set(existing.map(n => n.id));
         const now = Date.now();
-        let added = 0;
 
+        // Compute the set of IDs that should be active given the current text.
+        const desiredIds = new Set();
+        const newOnes = [];
         for (const m of matches) {
           const spec = m[1].trim();
           const txt = m[2].trim();
           const firesAt = parseWhen(spec, now);
-          if (firesAt == null) continue;
-          if (firesAt <= now) continue;
-
+          if (firesAt == null || firesAt <= now) continue;
           const id = await notifId(spec, txt);
-          if (existingIds.has(id)) continue;
-
-          existing.push({ id, text: txt, spec, scheduledAt: now, firesAt });
-          existingIds.add(id);
-          armTimer(id, txt, firesAt);
-          added++;
+          desiredIds.add(id);
+          if (!existing.some(n => n.id === id)) {
+            newOnes.push({ id, text: txt, spec, scheduledAt: now, firesAt });
+          }
         }
 
-        if (added > 0) await saveScheduledNotifs(existing);
-        return added;
+        // Anything in existing that's no longer in the text: cancel.
+        const removed = [];
+        const kept = [];
+        for (const n of existing) {
+          if (desiredIds.has(n.id)) kept.push(n);
+          else { cancelTimer(n.id); removed.push(n); }
+        }
+
+        // Request permission only if we have new ones to schedule.
+        if (newOnes.length > 0) {
+          if (Notification.permission === 'default') {
+            const perm = await Notification.requestPermission();
+            if (perm !== 'granted') newOnes.length = 0;
+          } else if (Notification.permission !== 'granted') {
+            newOnes.length = 0;
+          }
+        }
+
+        for (const n of newOnes) {
+          armTimer(n.id, n.text, n.firesAt);
+          kept.push(n);
+        }
+
+        if (newOnes.length > 0 || removed.length > 0) {
+          await saveScheduledNotifs(kept);
+        }
+        return { added: newOnes.length, removed: removed.length };
       }
 
       /* ── marked config ── */
@@ -742,7 +788,88 @@ Nice work! ✍️
         if (!('Notification' in window)) return;
         const list = await loadScheduledNotifs();
         for (const n of list) armTimer(n.id, n.text, n.firesAt);
+        refreshNotifsCount();
       })();
+
+      /* ── Notifications popover ── */
+      let notifsRefreshInterval = null;
+
+      function formatRemaining(ms) {
+        if (ms <= 0) return 'agora';
+        const s = Math.floor(ms / 1000);
+        if (s < 60) return `em ${s}s`;
+        const m = Math.floor(s / 60), rs = s % 60;
+        if (m < 60) return rs ? `em ${m}m ${rs}s` : `em ${m}m`;
+        const h = Math.floor(m / 60), rm = m % 60;
+        if (h < 24) return rm ? `em ${h}h ${rm}m` : `em ${h}h`;
+        const d = Math.floor(h / 24), rh = h % 24;
+        return rh ? `em ${d}d ${rh}h` : `em ${d}d`;
+      }
+
+      function formatAbsolute(firesAt) {
+        const d = new Date(firesAt);
+        const pad = n => String(n).padStart(2, '0');
+        return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      }
+
+      async function refreshNotifsCount() {
+        const list = await loadScheduledNotifs();
+        const n = list.length;
+        btnNotifsCount.textContent = n > 0 ? String(n) : '';
+      }
+
+      async function renderNotifsList() {
+        const list = (await loadScheduledNotifs()).sort((a, b) => a.firesAt - b.firesAt);
+        notifsList.innerHTML = '';
+        if (list.length === 0) {
+          const li = document.createElement('li');
+          li.className = 'notifs-empty';
+          li.textContent = 'Nenhum lembrete pendente.';
+          notifsList.appendChild(li);
+          return;
+        }
+        const now = Date.now();
+        for (const n of list) {
+          const li = document.createElement('li');
+          const txt = document.createElement('div');
+          txt.className = 'notif-text';
+          txt.textContent = n.text;
+          const when = document.createElement('div');
+          when.className = 'notif-when';
+          when.textContent = `${formatRemaining(n.firesAt - now)} · ${formatAbsolute(n.firesAt)}`;
+          li.appendChild(txt);
+          li.appendChild(when);
+          notifsList.appendChild(li);
+        }
+      }
+
+      function openNotifsPanel() {
+        notifsPanel.style.display = 'block';
+        renderNotifsList();
+        notifsRefreshInterval = setInterval(renderNotifsList, 1000);
+      }
+
+      function closeNotifsPanel() {
+        notifsPanel.style.display = 'none';
+        if (notifsRefreshInterval) {
+          clearInterval(notifsRefreshInterval);
+          notifsRefreshInterval = null;
+        }
+      }
+
+      btnNotifs.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (notifsPanel.style.display === 'none') openNotifsPanel();
+        else closeNotifsPanel();
+      });
+
+      document.addEventListener('click', (e) => {
+        if (notifsPanel.style.display !== 'none' &&
+            !notifsPanel.contains(e.target) &&
+            !btnNotifs.contains(e.target)) {
+          closeNotifsPanel();
+        }
+      });
 
       /* ── Events ── */
       editor.addEventListener('input', render);
@@ -862,11 +989,12 @@ Nice work! ✍️
         savedContent = content;
         render();
 
-        const added = await scheduleNotificationsFromText(content);
-        if (added > 0) {
-          const plural = added > 1 ? 's' : '';
-          showSaveFeedback(`✓ ${added} lembrete${plural} agendado${plural}`);
-        }
+        const { added, removed } = await scheduleNotificationsFromText(content);
+        if (added > 0 || removed > 0) refreshNotifsCount();
+        const parts = [];
+        if (added > 0)   parts.push(`✓ ${added} agendado${added > 1 ? 's' : ''}`);
+        if (removed > 0) parts.push(`✗ ${removed} cancelado${removed > 1 ? 's' : ''}`);
+        if (parts.length) showSaveFeedback(parts.join(' · '));
       }
 
       btnSave.addEventListener('click', saveFile);
@@ -990,6 +1118,7 @@ Nice work! ✍️
         'kbd':         () => wrap('<kbd>', '</kbd>', 'Ctrl'),
         'abbr':        () => wrap('<abbr title="meaning">', '</abbr>', 'abbr'),
         'details':     () => insertBlock(detailsTemplate),
+        'notify':      () => insertNotifyTemplate(),
       };
 
       document.querySelectorAll('#format-bar .fb-custom').forEach((btn) => {
@@ -1023,6 +1152,157 @@ Nice work! ✍️
           render();
         }
       });
+
+      /* ── @-command autocomplete ── */
+      const COMMANDS = [
+        { name: '@notify', desc: 'Lembrete agendado', insert: () => insertNotifyTemplate() }
+      ];
+
+      function insertNotifyTemplate() {
+        wrap('@notify(30m, ', ')', 'texto');
+        render();
+      }
+
+      const acEl = document.getElementById('autocomplete');
+      const acState = { visible: false, items: [], selected: 0, anchorPos: -1, queryLen: 0 };
+
+      function caretCoords(textarea, pos) {
+        const div = document.createElement('div');
+        const style = window.getComputedStyle(textarea);
+        const props = [
+          'boxSizing', 'width', 'height', 'overflowX', 'overflowY',
+          'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
+          'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+          'fontStyle', 'fontVariant', 'fontWeight', 'fontStretch', 'fontSize',
+          'lineHeight', 'fontFamily', 'textAlign', 'textTransform', 'textIndent',
+          'letterSpacing', 'wordSpacing', 'tabSize'
+        ];
+        props.forEach(p => { div.style[p] = style[p]; });
+        div.style.whiteSpace = 'pre-wrap';
+        div.style.wordWrap = 'break-word';
+        div.style.position = 'absolute';
+        div.style.visibility = 'hidden';
+        div.style.top = '0';
+        div.style.left = '0';
+
+        div.textContent = textarea.value.substring(0, pos);
+        const span = document.createElement('span');
+        span.textContent = textarea.value.substring(pos) || '.';
+        div.appendChild(span);
+        document.body.appendChild(div);
+
+        const rect = textarea.getBoundingClientRect();
+        const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2;
+        const result = {
+          top: rect.top - textarea.scrollTop + span.offsetTop,
+          left: rect.left - textarea.scrollLeft + span.offsetLeft,
+          lineHeight,
+        };
+        document.body.removeChild(div);
+        return result;
+      }
+
+      function hideAC() {
+        if (!acState.visible) return;
+        acState.visible = false;
+        acEl.style.display = 'none';
+      }
+
+      function renderAC() {
+        acEl.innerHTML = '';
+        acState.items.forEach((it, idx) => {
+          const item = document.createElement('div');
+          item.className = 'ac-item' + (idx === acState.selected ? ' selected' : '');
+          const name = document.createElement('div');
+          name.className = 'ac-name';
+          name.textContent = it.name;
+          const desc = document.createElement('div');
+          desc.className = 'ac-desc';
+          desc.textContent = it.desc;
+          item.appendChild(name);
+          item.appendChild(desc);
+          item.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            selectAC(idx);
+          });
+          acEl.appendChild(item);
+        });
+      }
+
+      function positionAC(cursorPos) {
+        const c = caretCoords(editor, cursorPos);
+        acEl.style.top = (c.top + c.lineHeight + 2) + 'px';
+        acEl.style.left = c.left + 'px';
+      }
+
+      function showAC(items, anchorPos, cursorPos) {
+        acState.visible = true;
+        acState.items = items;
+        acState.selected = 0;
+        acState.anchorPos = anchorPos;
+        acState.queryLen = cursorPos - anchorPos;
+        renderAC();
+        positionAC(cursorPos);
+        acEl.style.display = 'block';
+      }
+
+      function detectAutocomplete() {
+        const cursor = editor.selectionStart;
+        if (editor.selectionEnd !== cursor) { hideAC(); return; }
+        const text = editor.value;
+        let i = cursor - 1;
+        while (i >= 0 && /[a-zA-Z]/.test(text[i])) i--;
+        if (i < 0 || text[i] !== '@') { hideAC(); return; }
+        if (i > 0 && /[a-zA-Z0-9_]/.test(text[i - 1])) { hideAC(); return; }
+        const query = text.substring(i, cursor);
+        const filtered = COMMANDS.filter(c => c.name.startsWith(query));
+        if (filtered.length === 0) { hideAC(); return; }
+        showAC(filtered, i, cursor);
+      }
+
+      function selectAC(idx) {
+        const item = acState.items[idx];
+        if (!item) return;
+        const cursor = editor.selectionStart;
+        editor.focus();
+        editor.selectionStart = acState.anchorPos;
+        editor.selectionEnd = cursor;
+        document.execCommand('insertText', false, '');
+        hideAC();
+        item.insert();
+      }
+
+      editor.addEventListener('input', detectAutocomplete);
+      editor.addEventListener('click', detectAutocomplete);
+      editor.addEventListener('keyup', (e) => {
+        if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key)) {
+          detectAutocomplete();
+        }
+      });
+      editor.addEventListener('blur', () => {
+        setTimeout(hideAC, 100);
+      });
+      editor.addEventListener('scroll', () => {
+        if (acState.visible) positionAC(editor.selectionStart);
+      });
+      editor.addEventListener('keydown', (e) => {
+        if (!acState.visible) return;
+        if (e.key === 'ArrowDown') {
+          e.preventDefault(); e.stopPropagation();
+          acState.selected = (acState.selected + 1) % acState.items.length;
+          renderAC();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault(); e.stopPropagation();
+          acState.selected = (acState.selected - 1 + acState.items.length) % acState.items.length;
+          renderAC();
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+          e.preventDefault(); e.stopPropagation();
+          selectAC(acState.selected);
+        } else if (e.key === 'Escape') {
+          e.preventDefault(); e.stopPropagation();
+          hideAC();
+        }
+      }, true);
 
     })();
   </script>
