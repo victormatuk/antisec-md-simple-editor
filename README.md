@@ -57,7 +57,7 @@ Quando salvo, o badge no preview ganha cor de destaque (`⏰ spec · texto`) e a
 
 **Não some sozinho:** as notificações usam `requireInteraction`, ou seja, ficam visíveis até você clicar ou descartar manualmente — assim você não perde o lembrete se estiver longe do computador.
 
-**Som opcional:** dentro do painel de lembretes tem um toggle `🔔` / `🔕`. Quando ligado, dispara um bip curto (dois tons via Web Audio) junto com a notificação. A preferência é salva no localStorage. Clicar pra ligar também toca um preview do som.
+**Som opcional:** dentro do painel de lembretes tem um toggle `🔊` / `🔇`. Quando ligado, dispara um bip curto (dois tons via Web Audio) junto com a notificação. A preferência é salva no localStorage. Clicar pra ligar também toca um preview do som.
 
 **Inserir rapidamente:** clique no botão `⏰` no final do format bar ou digite `@` no editor — o autocomplete mostra os comandos disponíveis (no momento só `@notify`); Enter ou Tab insere o template `@notify(30m, texto)` com `texto` pronto pra ser substituído.
 

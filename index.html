@@ -25,7 +25,7 @@
 
     <!-- ── Toolbar ── -->
     <div id="toolbar">
-      <span class="logo">MD Editor v1.21</span>
+      <span class="logo">MD Editor v1.22</span>
       <div class="sep"></div>
 
       <button id="btn-open" title="Open file (Ctrl+O)">
@@ -76,7 +76,7 @@
         <div id="notifs-panel" style="display:none">
           <div class="notifs-panel-header">
             <span>Lembretes agendados</span>
-            <button id="btn-notif-sound" type="button" title="Som ao disparar lembrete">🔔</button>
+            <button id="btn-notif-sound" type="button" title="Som ao disparar lembrete">🔊</button>
           </div>
           <ul id="notifs-list"></ul>
           <div class="notifs-panel-hint">Para cancelar, apague o <code>@notify(...)</code> do texto e salve.</div>
@@ -907,7 +907,7 @@ Nice work! ✍️
 
       /* ── Sound toggle ── */
       function refreshSoundButton() {
-        btnNotifSound.textContent = soundEnabled ? '🔔' : '🔕';
+        btnNotifSound.textContent = soundEnabled ? '🔊' : '🔇';
         btnNotifSound.classList.toggle('muted', !soundEnabled);
         btnNotifSound.title = soundEnabled
           ? 'Som ligado — clique para silenciar'
