@@ -551,6 +551,130 @@ button svg {
   color: #f85149;
 }
 
+/* ─── @notify help modal ─────────────────────────────── */
+
+#notify-help-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#notify-help-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px var(--shadow);
+  width: min(640px, 92vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.notify-help-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  font-size: 0.95em;
+  flex-shrink: 0;
+}
+
+.notify-help-header code {
+  background: var(--code-bg);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+}
+
+#btn-notify-help-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1em;
+  color: var(--text-muted);
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+#btn-notify-help-close:hover {
+  background: var(--btn-hover);
+  color: var(--text);
+}
+
+.notify-help-body {
+  padding: 14px 16px;
+  overflow-y: auto;
+  font-size: 0.87em;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.notify-help-body p {
+  margin: 0 0 10px;
+}
+
+.notify-help-body h4 {
+  margin: 14px 0 6px;
+  font-size: 0.9em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.notify-help-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10px;
+}
+
+.notify-help-body th,
+.notify-help-body td {
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.notify-help-body th {
+  background: var(--btn-bg);
+  font-weight: 600;
+  font-size: 0.85em;
+  color: var(--text-muted);
+}
+
+.notify-help-body code {
+  background: var(--code-bg);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+
+.notify-help-body kbd {
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.85em;
+  font-family: inherit;
+}
+
+.notify-help-note {
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
+
 /* ─── Responsive ──────────────────────────────────────── */
 
 @media (max-width: 640px) {

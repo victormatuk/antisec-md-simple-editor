@@ -143,6 +143,7 @@
           <button type="button" class="fb-btn fb-custom" data-action="details" title="Collapsible block (&lt;details&gt;)">▾</button>
           <span class="fb-sep"></span>
           <button type="button" class="fb-btn fb-custom" data-action="notify" title="Lembrete @notify(30m, texto)">⏰</button>
+          <button type="button" class="fb-btn fb-custom" id="btn-notify-help" title="Exemplos de uso do @notify">?</button>
         </markdown-toolbar>
         <textarea id="editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
       </div>
@@ -155,6 +156,41 @@
           <span id="unsaved-dot"></span>
         </div>
         <div id="preview" class="markdown-body"></div>
+      </div>
+    </div>
+
+    <!-- ── @notify help modal ── -->
+    <div id="notify-help-overlay" style="display:none">
+      <div id="notify-help-modal" role="dialog" aria-modal="true" aria-labelledby="notify-help-title">
+        <div class="notify-help-header">
+          <span id="notify-help-title">Como usar <code>@notify</code></span>
+          <button type="button" id="btn-notify-help-close" aria-label="Fechar">✕</button>
+        </div>
+        <div class="notify-help-body">
+          <p>Insira lembretes diretamente no markdown. Ao salvar (<kbd>Ctrl+S</kbd>), o editor agenda uma notificação nativa.</p>
+          <p><strong>Sintaxe:</strong> <code>@notify(QUANDO, TEXTO)</code></p>
+          <h4>Duração relativa</h4>
+          <table>
+            <thead><tr><th>Exemplo</th><th>Significado</th></tr></thead>
+            <tbody>
+              <tr><td><code>@notify(30s, Verificar o forno)</code></td><td>30 segundos</td></tr>
+              <tr><td><code>@notify(30m, Tomar água)</code></td><td>30 minutos</td></tr>
+              <tr><td><code>@notify(2h, Almoço)</code></td><td>2 horas</td></tr>
+              <tr><td><code>@notify(1h30, Voltar para a reunião)</code></td><td>1h 30min</td></tr>
+              <tr><td><code>@notify(2h30m, Reunião)</code></td><td>2h e 30min</td></tr>
+              <tr><td><code>@notify(2h30m40s, Reunião curta)</code></td><td>2h, 30min e 40s</td></tr>
+            </tbody>
+          </table>
+          <h4>Timestamp absoluto</h4>
+          <table>
+            <thead><tr><th>Exemplo</th><th>Significado</th></tr></thead>
+            <tbody>
+              <tr><td><code>@notify(20260522 21:07, Sair)</code></td><td>22/05/2026 às 21:07</td></tr>
+              <tr><td><code>@notify(20260522 21:07:20, Sair)</code></td><td>precisão em segundos</td></tr>
+            </tbody>
+          </table>
+          <p class="notify-help-note">Formas como <code>30min</code>, <code>30sec</code> ou <code>1hour</code> <strong>não</strong> são aceitas — aparecem em vermelho. Timestamps no passado são ignorados.</p>
+        </div>
       </div>
     </div>
 
@@ -1214,6 +1250,23 @@ Nice work! ✍️
         wrap('@notify(30m, ', ')', 'texto');
         render();
       }
+
+      /* ── @notify help modal ── */
+      const notifyHelpOverlay = document.getElementById('notify-help-overlay');
+      document.getElementById('btn-notify-help').addEventListener('click', () => {
+        notifyHelpOverlay.style.display = 'flex';
+      });
+      document.getElementById('btn-notify-help-close').addEventListener('click', () => {
+        notifyHelpOverlay.style.display = 'none';
+      });
+      notifyHelpOverlay.addEventListener('click', (e) => {
+        if (e.target === notifyHelpOverlay) notifyHelpOverlay.style.display = 'none';
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && notifyHelpOverlay.style.display !== 'none') {
+          notifyHelpOverlay.style.display = 'none';
+        }
+      });
 
       const acEl = document.getElementById('autocomplete');
       const acState = { visible: false, items: [], selected: 0, anchorPos: -1, queryLen: 0 };
