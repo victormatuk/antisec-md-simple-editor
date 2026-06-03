@@ -7,6 +7,10 @@ Editor de Markdown com preview em tempo real, direto no browser. Sem instalaçã
 ## Funcionalidades
 
 - Preview em tempo real enquanto digita
+- **Múltiplas abas** — abra vários arquivos simultaneamente; cada aba mantém seu próprio estado (conteúdo, cursor, scroll, cache de imagens)
+- **Cole de imagem** — cole qualquer imagem (screenshot, copiar de browser) diretamente no editor; o arquivo é salvo no disco na mesma pasta do `.md` e o link Markdown é inserido automaticamente
+- **Miniatura no preview** — imagens locais aparecem como thumbnails clicáveis no painel de preview
+- **Lightbox** — clique na miniatura para ver a imagem em tamanho real (fechar com `Esc`, `✕` ou clique fora)
 - Abre e salva arquivos `.md` diretamente no disco (File System Access API)
 - Reabre o último arquivo após F5
 - Barra de formatação completa: cabeçalhos H1–H6, negrito, itálico, tachado, código inline, citação, listas (com e sem ordem, tarefas), link, imagem, menção, referência (issue/PR), tabela, linha horizontal, sub/sobrescrito, destaque (`<mark>`), sublinhado (`<ins>`), tecla (`<kbd>`), abreviação (`<abbr>`) e bloco recolhível (`<details>`)
@@ -68,13 +72,14 @@ Requisitos: a Notification API precisa de contexto seguro — funciona via `loca
 | Atalho | Ação |
 |---|---|
 | `Ctrl+S` | Salvar |
-| `Ctrl+O` | Abrir arquivo |
+| `Ctrl+O` | Abrir arquivo (em nova aba) |
 | `Ctrl+B` | Negrito |
 | `Ctrl+I` | Itálico |
 | `Ctrl+E` | Código inline |
 | `Ctrl+K` | Link |
 | `Ctrl+Shift+D` | Alternar tema |
 | `Tab` | Inserir 2 espaços |
+| `Ctrl+W` / `×` | Fechar aba atual |
 
 ## Arquivos
 

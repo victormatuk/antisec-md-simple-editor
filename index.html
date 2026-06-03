@@ -98,6 +98,12 @@
       </div>
     </div>
 
+    <!-- ── Tab bar ── -->
+    <div id="tab-bar">
+      <div id="tab-list"></div>
+      <button id="btn-new-tab" title="Nova aba">＋</button>
+    </div>
+
     <!-- ── Panes ── -->
     <div id="panes">
       <div id="editor-pane">
@@ -195,6 +201,12 @@
       </div>
     </div>
 
+    <!-- ── Image lightbox overlay ── -->
+    <div id="img-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Imagem em tamanho real">
+      <button id="img-overlay-close" aria-label="Fechar">✕</button>
+      <img id="img-overlay-img" src="" alt="">
+    </div>
+
     <!-- ── Autocomplete dropdown ── -->
     <div id="autocomplete" style="display:none"></div>
 
@@ -213,39 +225,69 @@
 
   <script>
     (function () {
-      /* ── State ── */
+      /* ════════════════════════════════════════════════════════════
+         TABS – state management
+         Each tab: { id, filename, fileHandle, dirHandle, savedContent,
+                     imageCache (Map<filename, objectURL>),
+                     cursorStart, cursorEnd, editorScrollTop, previewScrollTop }
+      ══════════════════════════════════════════════════════════════ */
+      let tabIdSeq = 0;
+      let tabs = [];
+      let activeTabId = null;
+
+      function makeTab(overrides = {}) {
+        return Object.assign({
+          id: ++tabIdSeq,
+          filename: 'new-file.md',
+          fileHandle: null,
+          dirHandle: null,
+          savedContent: '',
+          imageCache: new Map(),
+          cursorStart: 0,
+          cursorEnd: 0,
+          editorScrollTop: 0,
+          previewScrollTop: 0,
+        }, overrides);
+      }
+
+      function activeTab() { return tabs.find(t => t.id === activeTabId); }
+
+      /* ── Global state (not per-tab) ── */
       let isDark = false;
       let syncScroll = true;
-      let currentFilename = 'new-file.md';
-      let savedContent = '';
       let syncingFromEditor = false;
       let syncingFromPreview = false;
-      let fileHandle = null;
 
       /* ── Elements ── */
-      const editor = document.getElementById('editor');
-      const preview = document.getElementById('preview');
-      const fileInput = document.getElementById('file-input');
-      const btnOpen = document.getElementById('btn-open');
-      const btnSave = document.getElementById('btn-save');
-      const btnCopy = document.getElementById('btn-copy');
-      const btnSync = document.getElementById('btn-sync');
-      const btnTheme = document.getElementById('btn-theme');
-      const hlTheme = document.getElementById('hljs-theme');
-      const mdTheme = document.getElementById('md-theme');
-      const statWords = document.getElementById('stat-words');
-      const statChars = document.getElementById('stat-chars');
-      const statLines = document.getElementById('stat-lines');
-      const statTime = document.getElementById('stat-time');
-      const filenameLabel = document.getElementById('filename-label');
-      const unsavedDot = document.getElementById('unsaved-dot');
-      const btnNotifs = document.getElementById('btn-notifs');
+      const editor       = document.getElementById('editor');
+      const preview      = document.getElementById('preview');
+      const fileInput    = document.getElementById('file-input');
+      const btnOpen      = document.getElementById('btn-open');
+      const btnSave      = document.getElementById('btn-save');
+      const btnCopy      = document.getElementById('btn-copy');
+      const btnSync      = document.getElementById('btn-sync');
+      const btnTheme     = document.getElementById('btn-theme');
+      const hlTheme      = document.getElementById('hljs-theme');
+      const mdTheme      = document.getElementById('md-theme');
+      const statWords    = document.getElementById('stat-words');
+      const statChars    = document.getElementById('stat-chars');
+      const statLines    = document.getElementById('stat-lines');
+      const statTime     = document.getElementById('stat-time');
+      const filenameLabel= document.getElementById('filename-label');
+      const unsavedDot   = document.getElementById('unsaved-dot');
+      const btnNotifs    = document.getElementById('btn-notifs');
       const btnNotifsCount = document.getElementById('btn-notifs-count');
-      const notifsPanel = document.getElementById('notifs-panel');
-      const notifsList = document.getElementById('notifs-list');
-      const btnNotifSound = document.getElementById('btn-notif-sound');
+      const notifsPanel  = document.getElementById('notifs-panel');
+      const notifsList   = document.getElementById('notifs-list');
+      const btnNotifSound= document.getElementById('btn-notif-sound');
+      const tabList      = document.getElementById('tab-list');
+      const btnNewTab    = document.getElementById('btn-new-tab');
+      const imgOverlay   = document.getElementById('img-overlay');
+      const imgOverlayImg= document.getElementById('img-overlay-img');
 
-      /* ── IndexedDB helper (persists fileHandle across reloads) ── */
+      /* ════════════════════════════════════════════════════════════
+         IndexedDB helpers
+      ══════════════════════════════════════════════════════════════ */
       const IDB_NAME = 'md-editor', IDB_STORE = 'state', IDB_KEY = 'fileHandle';
       const IDB_NOTIFS_KEY = 'scheduledNotifications';
 
@@ -254,38 +296,37 @@
           const req = indexedDB.open(IDB_NAME, 1);
           req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
           req.onsuccess = () => res(req.result);
-          req.onerror = () => rej(req.error);
+          req.onerror  = () => rej(req.error);
         });
       }
-
       async function idbGet(key) {
         const db = await idbOpen();
         return new Promise((res, rej) => {
           const req = db.transaction(IDB_STORE).objectStore(IDB_STORE).get(key);
           req.onsuccess = () => res(req.result);
-          req.onerror = () => rej(req.error);
+          req.onerror  = () => rej(req.error);
         });
       }
-
       async function idbSet(key, value) {
         const db = await idbOpen();
         return new Promise((res, rej) => {
           const req = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).put(value, key);
           req.onsuccess = () => res();
-          req.onerror = () => rej(req.error);
+          req.onerror  = () => rej(req.error);
         });
       }
-
       async function idbDel(key) {
         const db = await idbOpen();
         return new Promise((res, rej) => {
           const req = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).delete(key);
           req.onsuccess = () => res();
-          req.onerror = () => rej(req.error);
+          req.onerror  = () => rej(req.error);
         });
       }
 
-      /* ── Save feedback (shown briefly in the unsaved-dot slot) ── */
+      /* ════════════════════════════════════════════════════════════
+         Save feedback
+      ══════════════════════════════════════════════════════════════ */
       let saveFeedbackTimer = null;
       function showSaveFeedback(msg) {
         if (saveFeedbackTimer) clearTimeout(saveFeedbackTimer);
@@ -297,24 +338,24 @@
         }, 2200);
       }
 
-      /* ── Notifications: parser, persistence, scheduling ── */
+      /* ════════════════════════════════════════════════════════════
+         Notifications
+      ══════════════════════════════════════════════════════════════ */
       const NOTIFY_RE = /@notify\(\s*([0-9a-zA-Z: ]+?)\s*,\s*([^)]+?)\s*\)/g;
 
       function parseWhen(spec, now = Date.now()) {
         const abs = spec.match(/^(\d{4})(\d{2})(\d{2})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
         if (abs) {
           const [, Y, Mo, D, H, Mi, S] = abs;
-          const t = new Date(+Y, +Mo - 1, +D, +H, +Mi, S ? +S : 0, 0).getTime();
+          const t = new Date(+Y, +Mo-1, +D, +H, +Mi, S ? +S : 0, 0).getTime();
           return Number.isNaN(t) ? null : t;
         }
         const norm = spec.replace(/(\d+\s*h)\s*(\d+)(?!\s*[hms])/gi, '$1$2m');
         if (!/^(?:\s*\d+\s*[hms]\s*)+$/i.test(norm)) return null;
-
         let total = 0, m;
         const re = /(\d+)\s*([hms])/gi;
         while ((m = re.exec(norm)) !== null) {
-          const n = parseInt(m[1], 10);
-          const u = m[2].toLowerCase();
+          const n = parseInt(m[1], 10), u = m[2].toLowerCase();
           if (u === 'h') total += n * 3600000;
           else if (u === 'm') total += n * 60000;
           else if (u === 's') total += n * 1000;
@@ -330,123 +371,82 @@
           .map(b => b.toString(16).padStart(2, '0')).join('');
       }
 
-      async function loadScheduledNotifs() {
-        return (await idbGet(IDB_NOTIFS_KEY)) || [];
-      }
-
-      async function saveScheduledNotifs(list) {
-        await idbSet(IDB_NOTIFS_KEY, list);
-      }
+      async function loadScheduledNotifs() { return (await idbGet(IDB_NOTIFS_KEY)) || []; }
+      async function saveScheduledNotifs(list) { await idbSet(IDB_NOTIFS_KEY, list); }
 
       const activeTimers = new Map();
-
       function armTimer(id, text, firesAt) {
         if (activeTimers.has(id)) clearTimeout(activeTimers.get(id));
-        const delay = Math.max(0, firesAt - Date.now());
-        const tid = setTimeout(() => fireNotification(id, text), delay);
+        const tid = setTimeout(() => fireNotification(id, text), Math.max(0, firesAt - Date.now()));
         activeTimers.set(id, tid);
       }
-
       function cancelTimer(id) {
-        if (activeTimers.has(id)) {
-          clearTimeout(activeTimers.get(id));
-          activeTimers.delete(id);
-        }
+        if (activeTimers.has(id)) { clearTimeout(activeTimers.get(id)); activeTimers.delete(id); }
       }
-
       async function fireNotification(id, text) {
         activeTimers.delete(id);
-        try {
-          new Notification('MD Editor', { body: text, requireInteraction: true, tag: id });
-        } catch {}
+        try { new Notification('MD Editor', { body: text, requireInteraction: true, tag: id }); } catch {}
         playNotificationSound();
         const list = (await loadScheduledNotifs()).filter(n => n.id !== id);
         await saveScheduledNotifs(list);
         refreshNotifsCount();
       }
 
-      /* ── Notification sound (Web Audio, lazy) ── */
       let soundEnabled = localStorage.getItem('notifSoundEnabled') !== '0';
       let audioCtx = null;
-
       function playNotificationSound() {
         if (!soundEnabled) return;
         try {
           if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
           if (audioCtx.state === 'suspended') audioCtx.resume();
           const now = audioCtx.currentTime;
-          // Two short tones (880 → 660 Hz) with quick fade in/out to avoid click.
           [{ f: 880, t: 0 }, { f: 660, t: 0.18 }].forEach(({ f, t }) => {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'sine';
-            osc.frequency.value = f;
+            const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+            osc.type = 'sine'; osc.frequency.value = f;
             gain.gain.setValueAtTime(0, now + t);
             gain.gain.linearRampToValueAtTime(0.18, now + t + 0.02);
             gain.gain.linearRampToValueAtTime(0, now + t + 0.16);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start(now + t);
-            osc.stop(now + t + 0.17);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(now + t); osc.stop(now + t + 0.17);
           });
-        } catch { /* audio blocked or unsupported */ }
+        } catch {}
       }
 
       async function scheduleNotificationsFromText(text) {
         if (!('Notification' in window)) return { added: 0, removed: 0 };
         const matches = [...text.matchAll(NOTIFY_RE)];
-
         const existing = await loadScheduledNotifs();
         const now = Date.now();
-
-        // Compute the set of IDs that should be active given the current text.
-        const desiredIds = new Set();
-        const newOnes = [];
+        const desiredIds = new Set(), newOnes = [];
         for (const m of matches) {
-          const spec = m[1].trim();
-          const txt = m[2].trim();
+          const spec = m[1].trim(), txt = m[2].trim();
           const firesAt = parseWhen(spec, now);
           if (firesAt == null || firesAt <= now) continue;
           const id = await notifId(spec, txt);
           desiredIds.add(id);
-          if (!existing.some(n => n.id === id)) {
-            newOnes.push({ id, text: txt, spec, scheduledAt: now, firesAt });
-          }
+          if (!existing.some(n => n.id === id)) newOnes.push({ id, text: txt, spec, scheduledAt: now, firesAt });
         }
-
-        // Anything in existing that's no longer in the text: cancel.
-        const removed = [];
-        const kept = [];
+        const removed = [], kept = [];
         for (const n of existing) {
           if (desiredIds.has(n.id)) kept.push(n);
           else { cancelTimer(n.id); removed.push(n); }
         }
-
-        // Request permission only if we have new ones to schedule.
         if (newOnes.length > 0) {
           if (Notification.permission === 'default') {
             const perm = await Notification.requestPermission();
             if (perm !== 'granted') newOnes.length = 0;
-          } else if (Notification.permission !== 'granted') {
-            newOnes.length = 0;
-          }
+          } else if (Notification.permission !== 'granted') { newOnes.length = 0; }
         }
-
-        for (const n of newOnes) {
-          armTimer(n.id, n.text, n.firesAt);
-          kept.push(n);
-        }
-
-        if (newOnes.length > 0 || removed.length > 0) {
-          await saveScheduledNotifs(kept);
-        }
+        for (const n of newOnes) { armTimer(n.id, n.text, n.firesAt); kept.push(n); }
+        if (newOnes.length > 0 || removed.length > 0) await saveScheduledNotifs(kept);
         return { added: newOnes.length, removed: removed.length };
       }
 
-      /* ── marked config ── */
+      /* ════════════════════════════════════════════════════════════
+         marked config
+      ══════════════════════════════════════════════════════════════ */
       marked.use({
-        breaks: true,
-        gfm: true,
+        breaks: true, gfm: true,
         renderer: {
           code(code, infostring) {
             const lang = (infostring || '').match(/\S*/)[0];
@@ -457,47 +457,53 @@
         }
       });
 
-      /* ── Render ── */
       function escapeHtml(s) {
-        return s.replace(/[&<>"']/g, c => ({
-          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-        }[c]));
+        return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
       }
 
       function preprocessMarkdown(src) {
-        // Accepts "[]" as shorthand for "[ ]" in task lists (GFM requires the space).
         src = src.replace(/^(\s*[-*+]\s+)\[\](?=\s|$)/gm, '$1[ ]');
-        // Turn @notify(spec, text) into a badge before marked sees it.
         src = src.replace(NOTIFY_RE, (_, spec, text) => {
           const s = spec.trim(), t = text.trim();
-          const firesAt = parseWhen(s);
-          const ok = firesAt != null && firesAt > Date.now();
-          const cls = ok ? 'notify-badge' : 'notify-badge notify-badge-err';
-          return `<span class="${cls}">⏰ ${escapeHtml(s)} · ${escapeHtml(t)}</span>`;
+          const ok = parseWhen(s) != null && parseWhen(s) > Date.now();
+          return `<span class="${ok ? 'notify-badge' : 'notify-badge notify-badge-err'}">⏰ ${escapeHtml(s)} · ${escapeHtml(t)}</span>`;
         });
         return src;
       }
 
+      /* ════════════════════════════════════════════════════════════
+         Render
+      ══════════════════════════════════════════════════════════════ */
       function render() {
+        const tab = activeTab();
+        if (!tab) return;
         const raw = editor.value;
-        const dirty = raw !== savedContent;
-        unsavedDot.textContent = dirty ? '● unsaved' : '';
-        unsavedDot.className = dirty ? 'unsaved' : '';
-
+        const dirty = raw !== tab.savedContent;
+        if (saveFeedbackTimer == null) {
+          unsavedDot.textContent = dirty ? '● unsaved' : '';
+          unsavedDot.className   = dirty ? 'unsaved'   : '';
+        }
         const html = DOMPurify.sanitize(marked.parse(preprocessMarkdown(raw)));
         preview.innerHTML = html;
+        /* Patch <img> src for pasted local images */
+        preview.querySelectorAll('img').forEach(img => {
+          const src = img.getAttribute('src');
+          if (src && !/^(https?:|data:|blob:)/.test(src) && tab.imageCache.has(src)) {
+            img.src = tab.imageCache.get(src);
+            img.classList.add('md-img-thumb');
+          }
+        });
         updateStats(raw);
+        renderTabBar();
       }
 
       function updateStats(text) {
         const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
-        const chars = text.length;
-        const lines = text.split('\n').length;
-
         statWords.textContent = `${words} ${words === 1 ? 'word' : 'words'}`;
-        statChars.textContent = `${chars} ${chars === 1 ? 'character' : 'characters'}`;
+        statChars.textContent = `${text.length} ${text.length === 1 ? 'character' : 'characters'}`;
+        const lines = text.split('\n').length;
         statLines.textContent = `${lines} ${lines === 1 ? 'line' : 'lines'}`;
-        statTime.textContent = estimateReadTime(words);
+        statTime.textContent  = estimateReadTime(words);
       }
 
       function estimateReadTime(words) {
@@ -505,7 +511,226 @@
         return mins <= 0 ? '—' : `~${mins} min read`;
       }
 
-      /* ── Default content ── */
+      /* ════════════════════════════════════════════════════════════
+         TAB BAR
+      ══════════════════════════════════════════════════════════════ */
+      function renderTabBar() {
+        tabList.innerHTML = '';
+        for (const tab of tabs) {
+          const btn = document.createElement('button');
+          btn.className = 'tab' + (tab.id === activeTabId ? ' active' : '');
+          btn.title = tab.filename;
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'tab-name';
+          const dirty = tab.id === activeTabId
+            ? editor.value !== tab.savedContent
+            : false; /* only check current for perf */
+          nameSpan.textContent = (dirty ? '● ' : '') + tab.filename;
+          btn.appendChild(nameSpan);
+          const closeBtn = document.createElement('button');
+          closeBtn.className = 'tab-close';
+          closeBtn.title = 'Fechar';
+          closeBtn.textContent = '×';
+          closeBtn.addEventListener('click', (e) => { e.stopPropagation(); closeTab(tab.id); });
+          btn.appendChild(closeBtn);
+          btn.addEventListener('click', () => switchTab(tab.id));
+          tabList.appendChild(btn);
+        }
+      }
+
+      function saveEditorStateToTab(tab) {
+        tab.cursorStart     = editor.selectionStart;
+        tab.cursorEnd       = editor.selectionEnd;
+        tab.editorScrollTop = editor.scrollTop;
+        tab.previewScrollTop= preview.scrollTop;
+        /* Do NOT save editor.value back here – it is always read from editor directly when active */
+      }
+
+      function switchTab(id) {
+        if (id === activeTabId) return;
+        /* Save current content into current tab before leaving */
+        const cur = activeTab();
+        if (cur) {
+          cur._pendingContent  = editor.value;
+          saveEditorStateToTab(cur);
+        }
+        activeTabId = id;
+        const tab = activeTab();
+        /* Restore editor content and cursor */
+        editor.value = tab._pendingContent !== undefined ? tab._pendingContent : tab.savedContent;
+        /* If this is a freshly created tab with empty savedContent, show empty editor */
+        editor.selectionStart = tab.cursorStart;
+        editor.selectionEnd   = tab.cursorEnd;
+        editor.scrollTop      = tab.editorScrollTop;
+        preview.scrollTop     = tab.previewScrollTop;
+        filenameLabel.textContent = tab.filename;
+        render();
+        editor.focus();
+      }
+
+      function createTab(options = {}) {
+        const tab = makeTab(options);
+        tabs.push(tab);
+        /* Persist pending content for previous active tab */
+        const cur = activeTab();
+        if (cur) {
+          cur._pendingContent = editor.value;
+          saveEditorStateToTab(cur);
+        }
+        activeTabId = tab.id;
+        editor.value = tab._pendingContent !== undefined ? tab._pendingContent : tab.savedContent;
+        filenameLabel.textContent = tab.filename;
+        render();
+        editor.focus();
+        return tab;
+      }
+
+      function closeTab(id) {
+        const tab = tabs.find(t => t.id === id);
+        if (!tab) return;
+        /* Check for unsaved changes */
+        const content = (id === activeTabId) ? editor.value : (tab._pendingContent ?? tab.savedContent);
+        if (content !== tab.savedContent) {
+          if (!confirm(`"${tab.filename}" tem alterações não salvas. Fechar mesmo assim?`)) return;
+        }
+        /* Revoke objectURLs to free memory */
+        tab.imageCache.forEach(url => URL.revokeObjectURL(url));
+        const idx = tabs.findIndex(t => t.id === id);
+        tabs.splice(idx, 1);
+        if (tabs.length === 0) {
+          /* Always keep at least one tab */
+          const newTab = makeTab({ savedContent: defaultContent });
+          newTab._pendingContent = defaultContent;
+          tabs.push(newTab);
+          activeTabId = newTab.id;
+          editor.value = defaultContent;
+          filenameLabel.textContent = newTab.filename;
+          render();
+        } else if (id === activeTabId) {
+          const newActive = tabs[Math.min(idx, tabs.length - 1)];
+          activeTabId = newActive.id;
+          editor.value = newActive._pendingContent !== undefined ? newActive._pendingContent : newActive.savedContent;
+          editor.selectionStart = newActive.cursorStart;
+          editor.selectionEnd   = newActive.cursorEnd;
+          editor.scrollTop      = newActive.editorScrollTop;
+          preview.scrollTop     = newActive.previewScrollTop;
+          filenameLabel.textContent = newActive.filename;
+          render();
+        } else {
+          renderTabBar();
+        }
+      }
+
+      btnNewTab.addEventListener('click', () => { createTab(); });
+
+      /* ════════════════════════════════════════════════════════════
+         IMAGE CACHE – load images from dirHandle
+      ══════════════════════════════════════════════════════════════ */
+      async function loadImagesForContent(text, dirHandle, imageCache) {
+        if (!dirHandle) return;
+        const imgRe = /!\[[^\]]*\]\(([^)]+)\)/g;
+        let m;
+        while ((m = imgRe.exec(text)) !== null) {
+          const src = m[1].trim();
+          if (/^(https?:|data:|blob:)/.test(src)) continue;
+          if (imageCache.has(src)) continue;
+          try {
+            const fh = await dirHandle.getFileHandle(src);
+            const file = await fh.getFile();
+            const url = URL.createObjectURL(file);
+            imageCache.set(src, url);
+          } catch { /* file not found, skip */ }
+        }
+      }
+
+      /* ════════════════════════════════════════════════════════════
+         IMAGE PASTE
+      ══════════════════════════════════════════════════════════════ */
+      async function handleImagePaste(e) {
+        const items = Array.from(e.clipboardData?.items || []);
+        const imageItem = items.find(it => it.type.startsWith('image/'));
+        if (!imageItem) return;
+
+        e.preventDefault();
+
+        const tab = activeTab();
+        if (!tab) return;
+
+        /* Ensure we have a directory to save into */
+        if (!tab.dirHandle) {
+          if (!tab.fileHandle) {
+            alert('Salve o arquivo .md primeiro para definir a pasta onde as imagens serão armazenadas.');
+            return;
+          }
+          /* Ask the user to confirm/pick the directory */
+          try {
+            tab.dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+          } catch (err) {
+            if (err.name !== 'AbortError') console.error(err);
+            return;
+          }
+        }
+
+        const blob = imageItem.getAsFile();
+        if (!blob) return;
+
+        /* Generate a unique filename */
+        const ext = blob.type.split('/')[1]?.replace('jpeg','jpg') || 'png';
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        const stamp = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+        const filename = `image-${stamp}.${ext}`;
+
+        /* Write the file to disk */
+        try {
+          const fh = await tab.dirHandle.getFileHandle(filename, { create: true });
+          const writable = await fh.createWritable();
+          await writable.write(blob);
+          await writable.close();
+        } catch (err) {
+          console.error('Erro ao salvar imagem:', err);
+          alert('Não foi possível salvar a imagem: ' + err.message);
+          return;
+        }
+
+        /* Cache it for preview */
+        const url = URL.createObjectURL(blob);
+        tab.imageCache.set(filename, url);
+
+        /* Insert markdown */
+        editor.focus();
+        document.execCommand('insertText', false, `![${filename}](${filename})`);
+        render();
+      }
+
+      editor.addEventListener('paste', handleImagePaste);
+
+      /* ════════════════════════════════════════════════════════════
+         IMAGE LIGHTBOX
+      ══════════════════════════════════════════════════════════════ */
+      preview.addEventListener('click', (e) => {
+        const img = e.target.closest('img.md-img-thumb');
+        if (!img) return;
+        imgOverlayImg.src = img.src;
+        imgOverlayImg.alt = img.alt;
+        imgOverlay.style.display = 'flex';
+      });
+
+      document.getElementById('img-overlay-close').addEventListener('click', () => {
+        imgOverlay.style.display = 'none';
+        imgOverlayImg.src = '';
+      });
+
+      imgOverlay.addEventListener('click', (e) => {
+        if (e.target === imgOverlay) {
+          imgOverlay.style.display = 'none';
+          imgOverlayImg.src = '';
+        }
+      });
+
+      /* ════════════════════════════════════════════════════════════
+         Default content
+      ══════════════════════════════════════════════════════════════ */
       const defaultContent = `# Welcome to MD Editor
 
 Write **Markdown** on the left and see the rendered result in real time on the right.
@@ -590,10 +815,6 @@ Image:
 
 ![Markdown Logo](https://upload.wikimedia.org/wikipedia/commons/4/48/Markdown-mark.svg)
 
-Image with clickable link:
-
-[![Markdown Logo](https://upload.wikimedia.org/wikipedia/commons/4/48/Markdown-mark.svg)](https://daringfireball.net/projects/markdown/)
-
 ---
 
 ## 5. Blockquotes
@@ -604,28 +825,12 @@ Image with clickable link:
 >
 > Second paragraph of the same quote.
 
-> Level 1
->> Level 2 (nested)
->>> Level 3
->>>> Level 4
-
-> 💡 **Tip:** you can mix lists inside quotes:
-> - Item 1
-> - Item 2
-
 ---
 
 ## 6. Code
 
 ### Inline
 Use \`const x = 42;\` to declare a constant.
-
-### Plain block
-
-\`\`\`
-No language defined — just preformatted text.
-  Spaces   and   indentation   preserved.
-\`\`\`
 
 ### JavaScript
 
@@ -648,183 +853,35 @@ def fib(n):
 print(list(fib(10)))
 \`\`\`
 
-### Bash
-
-\`\`\`bash
-#!/usr/bin/env bash
-for file in *.md; do
-  echo "Processing $file"
-done
-\`\`\`
-
-### JSON
-
-\`\`\`json
-{
-  "name": "md-editor",
-  "version": "1.0.0",
-  "features": ["preview", "highlight", "sync-scroll"]
-}
-\`\`\`
-
-### HTML
-
-\`\`\`html
-<div class="card">
-  <h2>Hello, world!</h2>
-  <p>Content here.</p>
-</div>
-\`\`\`
-
-### CSS
-
-\`\`\`css
-.card {
-  padding: 1rem;
-  border-radius: 8px;
-  background: #f6f8fa;
-}
-\`\`\`
-
-### SQL
-
-\`\`\`sql
-SELECT id, name, email
-FROM users
-WHERE created_at > NOW() - INTERVAL '7 days'
-ORDER BY created_at DESC;
-\`\`\`
-
-### Diff
-
-\`\`\`diff
-- removed line
-+ added line
-  unchanged line
-\`\`\`
-
-### Indented (4 spaces)
-
-    Indented code block
-    also works, without highlight.
-
 ---
 
 ## 7. Tables
 
-### Basic table
-
 | Shortcut         | Action          |
 |------------------|-----------------|
 | \`Ctrl+S\`        | Save            |
-| \`Ctrl+O\`        | Open file       |
+| \`Ctrl+O\`        | Open in new tab |
 | \`Ctrl+Shift+D\`  | Toggle theme    |
-
-### Table with alignment
-
-| Left      | Center      | Right   |
-|:----------|:-----------:|--------:|
-| row 1     | value       |   1.00  |
-| row 22    | other       |  22.50  |
-| row 333   | big thing   | 333.75  |
-
-### Table with inline formatting
-
-| Language  | Example                  | Popular? |
-|-----------|--------------------------|:--------:|
-| **JS**    | \`console.log('hi')\`     |    ✅    |
-| **Py**    | \`print("hi")\`           |    ✅    |
-| ~~COBOL~~ | *legacy*                 |    ❌    |
-
----
-
-## 8. Horizontal rule
-
-Three or more hyphens, asterisks, or underscores:
-
----
-
-***
-
-___
-
----
-
-## 9. Inline HTML
-
-<details>
-<summary>Click to expand 👇</summary>
-
-Hidden content inside \`<details>\`. It can contain **markdown** too:
-
-- item 1
-- item 2
-
-</details>
-
-<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> opens the command palette.
-
-<abbr title="HyperText Markup Language">HTML</abbr> is an acronym.
-
----
-
-## 10. Line breaks and paragraphs
-
-This line ends with two trailing spaces
-and breaks here (line break).
-
-This is a new
-line without an explicit break — it may or may not break depending on configuration.
-
-Paragraph separated by a blank line above.
-
----
-
-## 11. Emojis and special characters
-
-🚀 🎉 ✨ 🔥 ✍️ 💡 ✅ ❌ 📝 📦 🐛 🧪
-
-Arrows: → ← ↑ ↓ ⇒ ⇐
-Symbols: © ® ™ § ¶ † ‡ • … « »
-Math: ± × ÷ ≠ ≈ ≤ ≥ ∞ √ π Σ
-
----
-
-## 12. Advanced combinations
-
-> ### Quote with heading
->
-> 1. Ordered list inside a quote
-> 2. With \`inline code\`
->
-> \`\`\`js
-> // even a nested code block
-> const x = 1;
-> \`\`\`
->
-> | And | a table |
-> |-----|---------|
-> | a   | b       |
-
-- Item with **bold** and [link](https://example.com)
-  - Subitem with \`code\`
-  - Subitem with ![mini](https://upload.wikimedia.org/wikipedia/commons/4/48/Markdown-mark.svg)
-- Item with a code block:
-
-  \`\`\`js
-  console.log('inside the list');
-  \`\`\`
 
 ---
 
 Nice work! ✍️
 `;
 
-      editor.value = defaultContent;
-      savedContent = defaultContent;
-      render();
+      /* ── Bootstrap first tab ── */
+      (function initFirstTab() {
+        const tab = makeTab({ savedContent: defaultContent });
+        tab._pendingContent = defaultContent;
+        tabs.push(tab);
+        activeTabId = tab.id;
+        editor.value = defaultContent;
+        filenameLabel.textContent = tab.filename;
+        render();
+      })();
 
-      /* ── Restore last file on load ── */
+      /* ════════════════════════════════════════════════════════════
+         Restore last file on load
+      ══════════════════════════════════════════════════════════════ */
       const reopenBanner  = document.getElementById('reopen-banner');
       const reopenMsg     = document.getElementById('reopen-msg');
       const btnReopenYes  = document.getElementById('btn-reopen-yes');
@@ -837,21 +894,21 @@ Nice work! ✍️
           if (!stored) return;
           const perm = await stored.queryPermission({ mode: 'readwrite' });
           if (perm === 'granted') {
-            await loadFromHandle(stored);
+            await loadFromHandle(stored, activeTab());
           } else if (perm === 'prompt') {
             reopenMsg.textContent = `Reopen "${stored.name}"?`;
             reopenBanner.style.display = 'flex';
             btnReopenYes.onclick = async () => {
               reopenBanner.style.display = 'none';
               const granted = await stored.requestPermission({ mode: 'readwrite' });
-              if (granted === 'granted') await loadFromHandle(stored);
+              if (granted === 'granted') await loadFromHandle(stored, activeTab());
               else idbDel(IDB_KEY);
             };
             btnReopenNo.onclick = () => { reopenBanner.style.display = 'none'; };
           } else {
             await idbDel(IDB_KEY);
           }
-        } catch { /* handle revoked or missing */ }
+        } catch {}
       })();
 
       /* ── Restore scheduled notifications on load ── */
@@ -862,7 +919,9 @@ Nice work! ✍️
         refreshNotifsCount();
       })();
 
-      /* ── Notifications popover ── */
+      /* ════════════════════════════════════════════════════════════
+         Notifications panel
+      ══════════════════════════════════════════════════════════════ */
       let notifsRefreshInterval = null;
 
       function formatRemaining(ms) {
@@ -878,15 +937,13 @@ Nice work! ✍️
       }
 
       function formatAbsolute(firesAt) {
-        const d = new Date(firesAt);
-        const pad = n => String(n).padStart(2, '0');
-        return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        const d = new Date(firesAt), pad = n => String(n).padStart(2, '0');
+        return `${pad(d.getDate())}/${pad(d.getMonth()+1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
       }
 
       async function refreshNotifsCount() {
         const list = await loadScheduledNotifs();
-        const n = list.length;
-        btnNotifsCount.textContent = n > 0 ? String(n) : '';
+        btnNotifsCount.textContent = list.length > 0 ? String(list.length) : '';
       }
 
       async function renderNotifsList() {
@@ -896,21 +953,15 @@ Nice work! ✍️
           const li = document.createElement('li');
           li.className = 'notifs-empty';
           li.textContent = 'Nenhum lembrete pendente.';
-          notifsList.appendChild(li);
-          return;
+          notifsList.appendChild(li); return;
         }
         const now = Date.now();
         for (const n of list) {
           const li = document.createElement('li');
-          const txt = document.createElement('div');
-          txt.className = 'notif-text';
-          txt.textContent = n.text;
-          const when = document.createElement('div');
-          when.className = 'notif-when';
+          const txt = document.createElement('div'); txt.className = 'notif-text'; txt.textContent = n.text;
+          const when = document.createElement('div'); when.className = 'notif-when';
           when.textContent = `${formatRemaining(n.firesAt - now)} · ${formatAbsolute(n.firesAt)}`;
-          li.appendChild(txt);
-          li.appendChild(when);
-          notifsList.appendChild(li);
+          li.appendChild(txt); li.appendChild(when); notifsList.appendChild(li);
         }
       }
 
@@ -919,51 +970,39 @@ Nice work! ✍️
         renderNotifsList();
         notifsRefreshInterval = setInterval(renderNotifsList, 1000);
       }
-
       function closeNotifsPanel() {
         notifsPanel.style.display = 'none';
-        if (notifsRefreshInterval) {
-          clearInterval(notifsRefreshInterval);
-          notifsRefreshInterval = null;
-        }
+        if (notifsRefreshInterval) { clearInterval(notifsRefreshInterval); notifsRefreshInterval = null; }
       }
 
       btnNotifs.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (notifsPanel.style.display === 'none') openNotifsPanel();
-        else closeNotifsPanel();
+        if (notifsPanel.style.display === 'none') openNotifsPanel(); else closeNotifsPanel();
       });
-
       document.addEventListener('click', (e) => {
-        if (notifsPanel.style.display !== 'none' &&
-            !notifsPanel.contains(e.target) &&
-            !btnNotifs.contains(e.target)) {
+        if (notifsPanel.style.display !== 'none' && !notifsPanel.contains(e.target) && !btnNotifs.contains(e.target))
           closeNotifsPanel();
-        }
       });
 
-      /* ── Sound toggle ── */
       function refreshSoundButton() {
         btnNotifSound.textContent = soundEnabled ? '🔊' : '🔇';
         btnNotifSound.classList.toggle('muted', !soundEnabled);
-        btnNotifSound.title = soundEnabled
-          ? 'Som ligado — clique para silenciar'
-          : 'Som desligado — clique para ligar';
+        btnNotifSound.title = soundEnabled ? 'Som ligado — clique para silenciar' : 'Som desligado — clique para ligar';
       }
       refreshSoundButton();
-
       btnNotifSound.addEventListener('click', (e) => {
         e.stopPropagation();
         soundEnabled = !soundEnabled;
         localStorage.setItem('notifSoundEnabled', soundEnabled ? '1' : '0');
         refreshSoundButton();
-        if (soundEnabled) playNotificationSound();   // preview do som ao ligar
+        if (soundEnabled) playNotificationSound();
       });
 
-      /* ── Events ── */
+      /* ════════════════════════════════════════════════════════════
+         Editor events
+      ══════════════════════════════════════════════════════════════ */
       editor.addEventListener('input', render);
 
-      /* ── Scroll sync ── */
       editor.addEventListener('scroll', () => {
         if (!syncScroll || syncingFromPreview) return;
         syncingFromEditor = true;
@@ -980,16 +1019,31 @@ Nice work! ✍️
         syncingFromPreview = false;
       });
 
-      /* ── Open file ── */
-      async function loadFromHandle(handle) {
+      /* ════════════════════════════════════════════════════════════
+         Open file (always creates a new tab)
+      ══════════════════════════════════════════════════════════════ */
+      async function loadFromHandle(handle, tab) {
         const file = await handle.getFile();
-        currentFilename = file.name;
-        filenameLabel.textContent = currentFilename;
-        editor.value = await file.text();
-        savedContent = editor.value;
-        fileHandle = handle;
+        tab.filename    = file.name;
+        tab.fileHandle  = handle;
+        /* Try to obtain dirHandle from the parent directory (Chrome 99+) */
+        try {
+          if (handle.getParent) tab.dirHandle = await handle.getParent();
+        } catch {}
+        const text = await file.text();
+        tab.savedContent    = text;
+        tab._pendingContent = text;
         await idbSet(IDB_KEY, handle);
-        render();
+        /* Populate image cache */
+        await loadImagesForContent(text, tab.dirHandle, tab.imageCache);
+        /* If this is the active tab, update editor */
+        if (tab.id === activeTabId) {
+          editor.value = text;
+          filenameLabel.textContent = tab.filename;
+          render();
+        } else {
+          renderTabBar();
+        }
       }
 
       async function openFile() {
@@ -998,7 +1052,9 @@ Nice work! ✍️
             const [handle] = await window.showOpenFilePicker({
               types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md', '.markdown', '.txt'] } }]
             });
-            await loadFromHandle(handle);
+            /* Always open in a new tab */
+            const tab = createTab();
+            await loadFromHandle(handle, tab);
           } catch (err) {
             if (err.name !== 'AbortError') console.error(err);
           }
@@ -1012,28 +1068,33 @@ Nice work! ✍️
       fileInput.addEventListener('change', () => {
         const file = fileInput.files[0];
         if (!file) return;
-        fileHandle = null;
-        idbDel(IDB_KEY);
-        currentFilename = file.name;
-        filenameLabel.textContent = currentFilename;
+        const tab = createTab();
+        tab.filename = file.name;
+        filenameLabel.textContent = tab.filename;
         const reader = new FileReader();
-        reader.onload = (e) => {
-          editor.value = e.target.result;
-          savedContent = e.target.result;
+        reader.onload = (ev) => {
+          const text = ev.target.result;
+          tab.savedContent    = text;
+          tab._pendingContent = text;
+          editor.value = text;
           render();
         };
         reader.readAsText(file, 'UTF-8');
         fileInput.value = '';
       });
 
-      /* ── Save file ── */
+      /* ════════════════════════════════════════════════════════════
+         Save file
+      ══════════════════════════════════════════════════════════════ */
       async function saveFile() {
+        const tab = activeTab();
+        if (!tab) return;
         const content = editor.value;
         let written = false;
 
-        if (fileHandle) {
+        if (tab.fileHandle) {
           try {
-            const writable = await fileHandle.createWritable();
+            const writable = await tab.fileHandle.createWritable();
             await writable.write(content);
             await writable.close();
             written = true;
@@ -1046,13 +1107,15 @@ Nice work! ✍️
           if ('showSaveFilePicker' in window) {
             try {
               const handle = await window.showSaveFilePicker({
-                suggestedName: currentFilename,
+                suggestedName: tab.filename,
                 types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md', '.markdown'] } }]
               });
-              fileHandle = handle;
+              tab.fileHandle = handle;
               await idbSet(IDB_KEY, handle);
-              currentFilename = (await handle.getFile()).name;
-              filenameLabel.textContent = currentFilename;
+              tab.filename = (await handle.getFile()).name;
+              filenameLabel.textContent = tab.filename;
+              /* Try to get dirHandle */
+              try { if (handle.getParent) tab.dirHandle = await handle.getParent(); } catch {}
               const writable = await handle.createWritable();
               await writable.write(content);
               await writable.close();
@@ -1065,9 +1128,7 @@ Nice work! ✍️
             const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
-            a.download = currentFilename;
-            a.click();
+            a.href = url; a.download = tab.filename; a.click();
             URL.revokeObjectURL(url);
             written = true;
           }
@@ -1075,7 +1136,7 @@ Nice work! ✍️
 
         if (!written) return;
 
-        savedContent = content;
+        tab.savedContent = content;
         render();
 
         const { added, removed } = await scheduleNotificationsFromText(content);
@@ -1092,12 +1153,9 @@ Nice work! ✍️
       btnCopy.addEventListener('click', async () => {
         try {
           await navigator.clipboard.writeText(preview.innerHTML);
-          const original = btnCopy.textContent;
           btnCopy.textContent = '✓ Copied!';
           setTimeout(() => { btnCopy.innerHTML = `<svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"/></svg> Copy HTML`; }, 1800);
-        } catch {
-          alert('Could not access the clipboard.');
-        }
+        } catch { alert('Could not access the clipboard.'); }
       });
 
       /* ── Sync toggle ── */
@@ -1114,42 +1172,31 @@ Nice work! ✍️
         isDark = dark;
         document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
         btnTheme.textContent = dark ? '☀️' : '🌙';
-        hlTheme.href = dark
-          ? 'vendor/css/highlight-github-dark.min.css'
-          : 'vendor/css/highlight-github.min.css';
-        mdTheme.href = dark
-          ? 'vendor/css/github-markdown-dark.css'
-          : 'vendor/css/github-markdown-light.css';
+        hlTheme.href = dark ? 'vendor/css/highlight-github-dark.min.css' : 'vendor/css/highlight-github.min.css';
+        mdTheme.href = dark ? 'vendor/css/github-markdown-dark.css' : 'vendor/css/github-markdown-light.css';
         localStorage.setItem('md-theme', dark ? 'dark' : 'light');
       }
-
       btnTheme.addEventListener('click', () => setTheme(!isDark));
-
-      /* Restore saved theme */
       if (localStorage.getItem('md-theme') === 'dark') setTheme(true);
 
       /* ── Resizer ── */
-      const resizer = document.getElementById('resizer');
+      const resizer    = document.getElementById('resizer');
       const editorPane = document.getElementById('editor-pane');
-      const panes = document.getElementById('panes');
-      let isResizing = false;
+      const panes      = document.getElementById('panes');
+      let isResizing   = false;
 
-      resizer.addEventListener('mousedown', (e) => {
+      resizer.addEventListener('mousedown', () => {
         isResizing = true;
         resizer.classList.add('dragging');
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
       });
-
       document.addEventListener('mousemove', (e) => {
         if (!isResizing) return;
         const rect = panes.getBoundingClientRect();
-        const offset = e.clientX - rect.left;
-        const total = rect.width;
-        const pct = Math.min(Math.max(offset / total * 100, 15), 85);
+        const pct = Math.min(Math.max((e.clientX - rect.left) / rect.width * 100, 15), 85);
         editorPane.style.width = pct + '%';
       });
-
       document.addEventListener('mouseup', () => {
         if (!isResizing) return;
         isResizing = false;
@@ -1158,18 +1205,14 @@ Nice work! ✍️
         document.body.style.userSelect = '';
       });
 
-      /* ── Custom format buttons ──
-         Uses document.execCommand('insertText') because it's the only API that
-         integrates with the textarea's native undo stack (Ctrl+Z works).
-         setRangeText and direct .value assignment do NOT create undo entries. */
+      /* ── Custom format buttons ── */
       function wrap(prefix, suffix, placeholder = '') {
         editor.focus();
-        const start = editor.selectionStart;
-        const end = editor.selectionEnd;
+        const start = editor.selectionStart, end = editor.selectionEnd;
         const selected = editor.value.slice(start, end) || placeholder;
         document.execCommand('insertText', false, prefix + selected + suffix);
         editor.selectionStart = start + prefix.length;
-        editor.selectionEnd = start + prefix.length + selected.length;
+        editor.selectionEnd   = start + prefix.length + selected.length;
       }
 
       function insertBlock(text, innerCursor = null) {
@@ -1219,23 +1262,15 @@ Nice work! ✍️
 
       /* ── Keyboard shortcuts ── */
       document.addEventListener('keydown', (e) => {
-        if (e.ctrlKey && e.key === 's') {
-          e.preventDefault();
-          saveFile();
+        if (e.ctrlKey && e.key === 's') { e.preventDefault(); saveFile(); }
+        if (e.ctrlKey && e.key === 'o') { e.preventDefault(); openFile(); }
+        if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); setTheme(!isDark); }
+        if (e.key === 'Escape' && imgOverlay.style.display !== 'none') {
+          imgOverlay.style.display = 'none'; imgOverlayImg.src = '';
         }
-        if (e.ctrlKey && e.key === 'o') {
-          e.preventDefault();
-          openFile();
-        }
-        if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-          e.preventDefault();
-          setTheme(!isDark);
-        }
-        /* Tab key → insert 2 spaces */
         if (e.key === 'Tab' && document.activeElement === editor) {
           e.preventDefault();
-          const start = editor.selectionStart;
-          const end = editor.selectionEnd;
+          const start = editor.selectionStart, end = editor.selectionEnd;
           editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
           editor.selectionStart = editor.selectionEnd = start + 2;
           render();
@@ -1247,10 +1282,7 @@ Nice work! ✍️
         { name: '@notify', desc: 'Lembrete agendado', insert: () => insertNotifyTemplate() }
       ];
 
-      function insertNotifyTemplate() {
-        wrap('@notify(30m, ', ')', 'texto');
-        render();
-      }
+      function insertNotifyTemplate() { wrap('@notify(30m, ', ')', 'texto'); render(); }
 
       /* ── @notify help modal ── */
       const notifyHelpOverlay = document.getElementById('notify-help-overlay');
@@ -1264,9 +1296,8 @@ Nice work! ✍️
         if (e.target === notifyHelpOverlay) notifyHelpOverlay.style.display = 'none';
       });
       document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && notifyHelpOverlay.style.display !== 'none') {
+        if (e.key === 'Escape' && notifyHelpOverlay.style.display !== 'none')
           notifyHelpOverlay.style.display = 'none';
-        }
       });
 
       const acEl = document.getElementById('autocomplete');
@@ -1275,32 +1306,24 @@ Nice work! ✍️
       function caretCoords(textarea, pos) {
         const div = document.createElement('div');
         const style = window.getComputedStyle(textarea);
-        const props = [
-          'boxSizing', 'width', 'height', 'overflowX', 'overflowY',
-          'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
-          'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
-          'fontStyle', 'fontVariant', 'fontWeight', 'fontStretch', 'fontSize',
-          'lineHeight', 'fontFamily', 'textAlign', 'textTransform', 'textIndent',
-          'letterSpacing', 'wordSpacing', 'tabSize'
-        ];
-        props.forEach(p => { div.style[p] = style[p]; });
-        div.style.whiteSpace = 'pre-wrap';
-        div.style.wordWrap = 'break-word';
-        div.style.position = 'absolute';
-        div.style.visibility = 'hidden';
-        div.style.top = '0';
-        div.style.left = '0';
-
+        ['boxSizing','width','height','overflowX','overflowY',
+         'borderTopWidth','borderRightWidth','borderBottomWidth','borderLeftWidth',
+         'paddingTop','paddingRight','paddingBottom','paddingLeft',
+         'fontStyle','fontVariant','fontWeight','fontStretch','fontSize',
+         'lineHeight','fontFamily','textAlign','textTransform','textIndent',
+         'letterSpacing','wordSpacing','tabSize'
+        ].forEach(p => { div.style[p] = style[p]; });
+        div.style.whiteSpace = 'pre-wrap'; div.style.wordWrap = 'break-word';
+        div.style.position = 'absolute'; div.style.visibility = 'hidden';
+        div.style.top = '0'; div.style.left = '0';
         div.textContent = textarea.value.substring(0, pos);
         const span = document.createElement('span');
         span.textContent = textarea.value.substring(pos) || '.';
-        div.appendChild(span);
-        document.body.appendChild(div);
-
+        div.appendChild(span); document.body.appendChild(div);
         const rect = textarea.getBoundingClientRect();
         const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2;
         const result = {
-          top: rect.top - textarea.scrollTop + span.offsetTop,
+          top:  rect.top  - textarea.scrollTop  + span.offsetTop,
           left: rect.left - textarea.scrollLeft + span.offsetLeft,
           lineHeight,
         };
@@ -1308,48 +1331,31 @@ Nice work! ✍️
         return result;
       }
 
-      function hideAC() {
-        if (!acState.visible) return;
-        acState.visible = false;
-        acEl.style.display = 'none';
-      }
+      function hideAC() { if (!acState.visible) return; acState.visible = false; acEl.style.display = 'none'; }
 
       function renderAC() {
         acEl.innerHTML = '';
         acState.items.forEach((it, idx) => {
           const item = document.createElement('div');
           item.className = 'ac-item' + (idx === acState.selected ? ' selected' : '');
-          const name = document.createElement('div');
-          name.className = 'ac-name';
-          name.textContent = it.name;
-          const desc = document.createElement('div');
-          desc.className = 'ac-desc';
-          desc.textContent = it.desc;
-          item.appendChild(name);
-          item.appendChild(desc);
-          item.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            selectAC(idx);
-          });
+          const name = document.createElement('div'); name.className = 'ac-name'; name.textContent = it.name;
+          const desc = document.createElement('div'); desc.className = 'ac-desc'; desc.textContent = it.desc;
+          item.appendChild(name); item.appendChild(desc);
+          item.addEventListener('mousedown', (e) => { e.preventDefault(); selectAC(idx); });
           acEl.appendChild(item);
         });
       }
 
       function positionAC(cursorPos) {
         const c = caretCoords(editor, cursorPos);
-        acEl.style.top = (c.top + c.lineHeight + 2) + 'px';
+        acEl.style.top  = (c.top + c.lineHeight + 2) + 'px';
         acEl.style.left = c.left + 'px';
       }
 
       function showAC(items, anchorPos, cursorPos) {
-        acState.visible = true;
-        acState.items = items;
-        acState.selected = 0;
-        acState.anchorPos = anchorPos;
-        acState.queryLen = cursorPos - anchorPos;
-        renderAC();
-        positionAC(cursorPos);
-        acEl.style.display = 'block';
+        acState.visible = true; acState.items = items; acState.selected = 0;
+        acState.anchorPos = anchorPos; acState.queryLen = cursorPos - anchorPos;
+        renderAC(); positionAC(cursorPos); acEl.style.display = 'block';
       }
 
       function detectAutocomplete() {
@@ -1359,7 +1365,7 @@ Nice work! ✍️
         let i = cursor - 1;
         while (i >= 0 && /[a-zA-Z]/.test(text[i])) i--;
         if (i < 0 || text[i] !== '@') { hideAC(); return; }
-        if (i > 0 && /[a-zA-Z0-9_]/.test(text[i - 1])) { hideAC(); return; }
+        if (i > 0 && /[a-zA-Z0-9_]/.test(text[i-1])) { hideAC(); return; }
         const query = text.substring(i, cursor);
         const filtered = COMMANDS.filter(c => c.name.startsWith(query));
         if (filtered.length === 0) { hideAC(); return; }
@@ -1372,46 +1378,35 @@ Nice work! ✍️
         const cursor = editor.selectionStart;
         editor.focus();
         editor.selectionStart = acState.anchorPos;
-        editor.selectionEnd = cursor;
+        editor.selectionEnd   = cursor;
         document.execCommand('insertText', false, '');
-        hideAC();
-        item.insert();
+        hideAC(); item.insert();
       }
 
       editor.addEventListener('input', detectAutocomplete);
       editor.addEventListener('click', detectAutocomplete);
       editor.addEventListener('keyup', (e) => {
-        if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key)) {
-          detectAutocomplete();
-        }
+        if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key)) detectAutocomplete();
       });
-      editor.addEventListener('blur', () => {
-        setTimeout(hideAC, 100);
-      });
-      editor.addEventListener('scroll', () => {
-        if (acState.visible) positionAC(editor.selectionStart);
-      });
+      editor.addEventListener('blur', () => { setTimeout(hideAC, 100); });
+      editor.addEventListener('scroll', () => { if (acState.visible) positionAC(editor.selectionStart); });
       editor.addEventListener('keydown', (e) => {
         if (!acState.visible) return;
         if (e.key === 'ArrowDown') {
           e.preventDefault(); e.stopPropagation();
-          acState.selected = (acState.selected + 1) % acState.items.length;
-          renderAC();
+          acState.selected = (acState.selected + 1) % acState.items.length; renderAC();
         } else if (e.key === 'ArrowUp') {
           e.preventDefault(); e.stopPropagation();
-          acState.selected = (acState.selected - 1 + acState.items.length) % acState.items.length;
-          renderAC();
+          acState.selected = (acState.selected - 1 + acState.items.length) % acState.items.length; renderAC();
         } else if (e.key === 'Enter' || e.key === 'Tab') {
-          e.preventDefault(); e.stopPropagation();
-          selectAC(acState.selected);
+          e.preventDefault(); e.stopPropagation(); selectAC(acState.selected);
         } else if (e.key === 'Escape') {
-          e.preventDefault(); e.stopPropagation();
-          hideAC();
+          e.preventDefault(); e.stopPropagation(); hideAC();
         }
       }, true);
 
     })();
   </script>
-</body>
 
+</body>
 </html>
