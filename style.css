@@ -687,44 +687,37 @@ button svg {
     display: none;
   }
 }
-/* ─── Tab bar ─────────────────────────────────────────────── */
-#tab-bar {
+/* ─── Tab list (inline na toolbar) ──────────────────────────── */
+#tab-list {
+  flex: 1;
+  min-width: 0;
   display: flex;
-  align-items: center;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+  align-items: stretch;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar) transparent;
-  min-height: 34px;
+  /* alinhar com a borda inferior da toolbar */
+  align-self: stretch;
+  margin: -8px 0 -8px 4px;
 }
 
-#tab-bar::-webkit-scrollbar { height: 4px; }
-#tab-bar::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 2px; }
-
-#tab-list {
-  display: flex;
-  align-items: stretch;
-  flex: 1;
-  min-height: 34px;
-}
+#tab-list::-webkit-scrollbar { height: 3px; }
+#tab-list::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 2px; }
 
 .tab {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 0 10px;
-  min-width: 100px;
-  max-width: 200px;
-  height: 34px;
+  padding: 0 12px;
+  min-width: 90px;
+  max-width: 180px;
   font-size: 12px;
   font-family: inherit;
   color: var(--text-muted);
   background: transparent;
   border: none;
-  border-right: 1px solid var(--border);
+  border-left: 1px solid var(--border);
   border-radius: 0;
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
@@ -733,17 +726,29 @@ button svg {
   position: relative;
 }
 
+.tab:last-of-type {
+  border-right: 1px solid var(--border);
+}
+
 .tab:hover {
   background: var(--btn-hover);
   color: var(--text);
-  border-color: var(--border);
 }
 
 .tab.active {
   background: var(--bg);
   color: var(--text);
   font-weight: 600;
-  border-bottom: 2px solid var(--accent);
+}
+
+.tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
 }
 
 .tab-name {
@@ -759,8 +764,8 @@ button svg {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   font-size: 13px;
   line-height: 1;
   color: var(--text-muted);
@@ -770,7 +775,7 @@ button svg {
   padding: 0;
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
-  opacity: 0.5;
+  opacity: 0.4;
 }
 
 .tab:hover .tab-close,
@@ -785,27 +790,7 @@ button svg {
 }
 
 #btn-new-tab {
-  flex-shrink: 0;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  font-size: 18px;
-  font-weight: 300;
-  color: var(--text-muted);
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  cursor: pointer;
-  transition: background 0.12s, color 0.12s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-#btn-new-tab:hover {
-  background: var(--btn-hover);
-  color: var(--accent);
-  border-color: transparent;
+  /* herda o estilo padrão de button — sem override necessário */
 }
 
 /* ─── Image thumbnail (pasted local images) ──────────────── */

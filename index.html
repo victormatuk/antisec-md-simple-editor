@@ -26,8 +26,15 @@
 
     <!-- ── Toolbar ── -->
     <div id="toolbar">
-      <span class="logo">MD Editor v1.23</span>
+      <span class="logo">MD Editor v1.24</span>
       <div class="sep"></div>
+
+      <button id="btn-new-tab" title="Nova aba (Ctrl+T)">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2Z"/>
+        </svg>
+        New
+      </button>
 
       <button id="btn-open" title="Open file (Ctrl+O)">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
@@ -65,7 +72,7 @@
         Sync
       </button>
 
-      <div class="spacer"></div>
+      <div id="tab-list"></div>
 
       <div id="notifs-wrap">
         <button id="btn-notifs" title="Lembretes agendados">
@@ -96,12 +103,6 @@
         <button id="btn-reopen-yes">Reopen</button>
         <button id="btn-reopen-no">Ignore</button>
       </div>
-    </div>
-
-    <!-- ── Tab bar ── -->
-    <div id="tab-bar">
-      <div id="tab-list"></div>
-      <button id="btn-new-tab" title="Nova aba">＋</button>
     </div>
 
     <!-- ── Panes ── -->
@@ -1264,6 +1265,7 @@ Nice work! ✍️
       document.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.key === 's') { e.preventDefault(); saveFile(); }
         if (e.ctrlKey && e.key === 'o') { e.preventDefault(); openFile(); }
+        if (e.ctrlKey && e.key === 't') { e.preventDefault(); createTab(); }
         if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); setTheme(!isDark); }
         if (e.key === 'Escape' && imgOverlay.style.display !== 'none') {
           imgOverlay.style.display = 'none'; imgOverlayImg.src = '';
